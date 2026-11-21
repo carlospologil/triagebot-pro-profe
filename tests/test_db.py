@@ -98,10 +98,10 @@ def test_versiones_duplicadas_o_desordenadas_se_rechazan(db):
 
 
 def test_init_db_dos_veces_no_falla_ni_duplica(settings):
-    assert init_db(settings.database_path) == [1]
+    assert init_db(settings.database_path) == [m.version for m in MIGRATIONS]
     assert init_db(settings.database_path) == []
     conn = connect(settings.database_path)
-    assert current_version(conn) == 1
+    assert current_version(conn) == MIGRATIONS[-1].version
     assert TABLAS <= nombres(conn, "table")
     conn.close()
 
@@ -111,7 +111,7 @@ def test_arrancar_la_app_dos_veces_no_duplica_ni_falla(settings):
         with TestClient(create_app(settings)) as c:
             assert c.get("/health").status_code == 200
     conn = connect(settings.database_path)
-    assert conn.execute("SELECT COUNT(*) FROM schema_version").fetchone()[0] == 1
+    assert conn.execute("SELECT COUNT(*) FROM schema_version").fetchone()[0] == len(MIGRATIONS)
     conn.close()
 
 
@@ -230,3 +230,16 @@ def test_email_de_usuario_es_unico(db):
     insertar_usuario(db, "dup@example.com")
     with pytest.raises(sqlite3.IntegrityError, match="UNIQUE"):
         insertar_usuario(db, "dup@example.com")
+
+
+def test_conexion_por_peticion_se_puede_usar_desde_otro_hilo(settings):
+    import threading
+
+    init_db(settings.database_path)
+    conn = connect(settings.database_path)
+    resultado = []
+    hilo = threading.Thread(target=lambda: resultado.append(conn.execute("SELECT 1").fetchone()[0]))
+    hilo.start()
+    hilo.join()
+    conn.close()
+    assert resultado == [1]

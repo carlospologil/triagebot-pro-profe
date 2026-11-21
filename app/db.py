@@ -8,7 +8,9 @@ from fastapi import Request
 
 
 def connect(database_path: str) -> sqlite3.Connection:
-    conn = sqlite3.connect(database_path)
+    # FastAPI puede ejecutar la dependencia get_db y el endpoint síncrono en hilos distintos
+    # del threadpool; la conexión es de una sola petición, así que no se usa a la vez.
+    conn = sqlite3.connect(database_path, check_same_thread=False)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
     return conn
@@ -95,6 +97,14 @@ MIGRATIONS: tuple[Migration, ...] = (
             "CREATE INDEX idx_auditoria_ticket_id ON auditoria(ticket_id)",
             "CREATE INDEX idx_auditoria_usuario_id ON auditoria(usuario_id)",
             "CREATE INDEX idx_auditoria_creado_en ON auditoria(creado_en)",
+        ),
+    ),
+    Migration(
+        version=2,
+        name="bloqueo_de_acceso",
+        statements=(
+            "ALTER TABLE usuarios ADD COLUMN intentos_fallidos INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE usuarios ADD COLUMN bloqueado_hasta TEXT",
         ),
     ),
 )

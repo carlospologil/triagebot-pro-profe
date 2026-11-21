@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block titulo %}Bandeja · TriageBot Pro{% endblock %}
+{% block cuerpo %}
+<header class="barra">
+  <span class="marca">TriageBot <span>Pro</span></span>
+  <form method="post" action="/logout" class="barra-usuario">
+    <span>{{ usuario.nombre }}</span>
+    <button type="submit" class="boton boton-secundario">Cerrar sesión</button>
+  </form>
+</header>
+<main class="contenido">
+  <h1>Bandeja</h1>
+  <p>Aún no hay tickets que mostrar.</p>
+</main>
+{% endblock %}

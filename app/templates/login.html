@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block titulo %}Iniciar sesión · TriageBot Pro{% endblock %}
+{% block clase_body %}pagina-login{% endblock %}
+{% block cuerpo %}
+<main class="tarjeta-login">
+  <h1 class="marca">TriageBot <span>Pro</span></h1>
+  <p class="subtitulo">Accede con tu cuenta del equipo de soporte</p>
+  {% if error %}
+  <p class="alerta alerta-error" role="alert">{{ error }}</p>
+  {% endif %}
+  <form method="post" action="/login" class="formulario">
+    <label for="email">Correo electrónico</label>
+    <input id="email" name="email" type="email" value="{{ email }}" autocomplete="username" required autofocus>
+    <label for="password">Contraseña</label>
+    <input id="password" name="password" type="password" autocomplete="current-password" required>
+    <button type="submit" class="boton">Iniciar sesión</button>
+  </form>
+</main>
+{% endblock %}

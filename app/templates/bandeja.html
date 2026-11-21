@@ -4,6 +4,7 @@
 <header class="barra">
   <span class="marca">TriageBot <span>Pro</span></span>
   <form method="post" action="/logout" class="barra-usuario">
+    {% if usuario.rol == "admin" %}<a href="/admin">Administración</a>{% endif %}
     <span>{{ usuario.nombre }}</span>
     <button type="submit" class="boton boton-secundario">Cerrar sesión</button>
   </form>

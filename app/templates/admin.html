@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block titulo %}Administración · TriageBot Pro{% endblock %}
+{% block cuerpo %}
+<header class="barra">
+  <span class="marca">TriageBot <span>Pro</span></span>
+  <form method="post" action="/logout" class="barra-usuario">
+    <a href="/bandeja">Bandeja</a>
+    <span>{{ usuario.nombre }}</span>
+    <button type="submit" class="boton boton-secundario">Cerrar sesión</button>
+  </form>
+</header>
+<main class="contenido">
+  <h1>Administración</h1>
+  <p>Desde aquí se gestionarán los usuarios y se consultará la auditoría.</p>
+</main>
+{% endblock %}

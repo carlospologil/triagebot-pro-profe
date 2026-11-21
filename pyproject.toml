@@ -1,0 +1,16 @@
+[project]
+name = "triagebot-pro"
+version = "0.1.0"
+description = "TriageBot Pro: gestión de tickets de soporte con clasificación por IA"
+requires-python = ">=3.12"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

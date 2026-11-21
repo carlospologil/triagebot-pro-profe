@@ -133,7 +133,7 @@ def test_un_prefijo_parecido_a_una_ruta_publica_no_es_publico(client):
 
 def test_ruta_api_con_sesion_pasa_el_control_de_acceso(client, usuario):
     login(client)
-    assert client.get("/api/tickets").status_code == 404
+    assert client.get("/api/ruta-inexistente").status_code == 404
 
 
 def test_usuario_desactivado_pierde_la_sesion(client, usuario, db):

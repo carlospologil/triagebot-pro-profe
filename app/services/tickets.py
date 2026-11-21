@@ -1,10 +1,15 @@
 """Alta, consulta y actualización de tickets."""
 
+import logging
 import math
 import sqlite3
+from typing import Any
 
 from app.clock import Clock, system_clock, to_iso
 from app.schemas import ESTADOS_FINALES, PaginaTickets, TicketCrear, TicketSalida
+from app.services import clasificador
+
+logger = logging.getLogger(__name__)
 
 CAMPOS_EDITABLES = ("estado", "prioridad", "categoria", "asignado_a")
 
@@ -54,6 +59,41 @@ def crear_ticket(
     )
     conn.commit()
     return obtener_ticket(conn, cursor.lastrowid)
+
+
+def clasificar_ticket(
+    conn: sqlite3.Connection,
+    ticket_id: int,
+    cliente: Any | None,
+    clock: Clock = system_clock,
+    *,
+    marcar_sin_clasificar: bool = False,
+) -> TicketSalida:
+    """Clasifica el ticket con el LLM y guarda categoría, prioridad y justificación.
+
+    Si la IA falla el error se registra en el log. Con `marcar_sin_clasificar` el ticket queda
+    como `sin_clasificar` (alta de ticket); si no, se relanza ClasificacionError y el ticket
+    no se toca (reclasificación, para no pisar una clasificación previa por un fallo puntual).
+    """
+    ticket = obtener_ticket(conn, ticket_id)
+    try:
+        resultado = clasificador.clasificar(cliente, ticket.asunto, ticket.texto)
+    except clasificador.ClasificacionError as exc:
+        logger.error("No se pudo clasificar el ticket %s: %s", ticket_id, exc)
+        if not marcar_sin_clasificar:
+            raise
+        cambios = {"categoria": clasificador.CATEGORIA_SIN_CLASIFICAR}
+    else:
+        cambios = {
+            "categoria": resultado.categoria,
+            "prioridad": resultado.prioridad,
+            "resumen_ia": resultado.justificacion,
+        }
+    cambios["actualizado_en"] = to_iso(clock())
+    asignaciones = ", ".join(f"{columna} = ?" for columna in cambios)
+    conn.execute(f"UPDATE tickets SET {asignaciones} WHERE id = ?", [*cambios.values(), ticket_id])
+    conn.commit()
+    return obtener_ticket(conn, ticket_id)
 
 
 def obtener_ticket(conn: sqlite3.Connection, ticket_id: int) -> TicketSalida:

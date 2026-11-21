@@ -6,7 +6,9 @@ from pydantic import BaseModel, ConfigDict, Field, StringConstraints, field_vali
 
 Estado = Literal["nuevo", "en_progreso", "pendiente", "resuelto", "cerrado"]
 Prioridad = Literal["baja", "media", "alta", "urgente"]
-Categoria = Literal["facturacion", "tecnico", "cuenta", "comercial", "otro"]
+Categoria = Literal[
+    "facturacion", "tecnico", "cuenta", "comercial", "envio", "otro", "sin_clasificar"
+]
 
 ESTADOS_FINALES: tuple[str, ...] = ("resuelto", "cerrado")
 

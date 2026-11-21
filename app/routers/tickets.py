@@ -1,5 +1,5 @@
 import sqlite3
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
@@ -15,19 +15,39 @@ from app.schemas import (
     TicketSalida,
 )
 from app.services import tickets as servicio
+from app.services.clasificador import ClasificacionError, get_cliente_llm
 
 router = APIRouter(prefix="/api/tickets", tags=["tickets"])
 
 Db = Annotated[sqlite3.Connection, Depends(get_db)]
 RelojDep = Annotated[Clock, Depends(get_clock)]
+LlmDep = Annotated[Any, Depends(get_cliente_llm)]
 
 _NO_ENCONTRADO = {404: {"description": "El ticket no existe."}}
 
 
 @router.post("", response_model=TicketSalida, status_code=status.HTTP_201_CREATED)
-def crear(datos: TicketCrear, conn: Db, clock: RelojDep):
-    """Crea un ticket en estado `nuevo`."""
-    return servicio.crear_ticket(conn, datos, clock)
+def crear(datos: TicketCrear, conn: Db, clock: RelojDep, llm: LlmDep):
+    """Crea un ticket en estado `nuevo` y lo clasifica con IA (si falla, queda `sin_clasificar`)."""
+    ticket = servicio.crear_ticket(conn, datos, clock)
+    return servicio.clasificar_ticket(conn, ticket.id, llm, clock, marcar_sin_clasificar=True)
+
+
+@router.post(
+    "/{ticket_id}/reclasificar",
+    response_model=TicketSalida,
+    responses={**_NO_ENCONTRADO, 502: {"description": "La IA no pudo clasificar el ticket."}},
+)
+def reclasificar(ticket_id: int, conn: Db, clock: RelojDep, llm: LlmDep):
+    """Vuelve a clasificar el ticket con IA. Si la IA falla, el ticket no cambia."""
+    try:
+        return servicio.clasificar_ticket(conn, ticket_id, llm, clock)
+    except servicio.TicketNoEncontradoError:
+        raise HTTPException(status_code=404, detail="Ticket no encontrado") from None
+    except ClasificacionError:
+        raise HTTPException(
+            status_code=502, detail="No se pudo clasificar el ticket con IA. Inténtalo de nuevo."
+        ) from None
 
 
 @router.get("", response_model=PaginaTickets)

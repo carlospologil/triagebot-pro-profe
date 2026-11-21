@@ -66,7 +66,7 @@ def test_crear_devuelve_201_con_el_ticket_en_estado_nuevo(sesion, reloj):
     assert t["id"] >= 1
     assert t["estado"] == "nuevo"
     assert t["prioridad"] == "media"
-    assert t["categoria"] is None
+    assert t["categoria"] == "otro"  # clasificada por el LLM falso de conftest (F07)
     assert t["asignado_a"] is None
     assert t["asunto"] == "No puedo entrar"
     assert t["texto"] == "Sale error 500"

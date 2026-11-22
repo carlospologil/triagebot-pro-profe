@@ -6,6 +6,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 
 from app.clock import Clock, get_clock
 from app.db import get_db
+from app.flash import flash
 from app.middleware import SESSION_USER_KEY
 from app.services.autenticacion import authenticate
 from app.templating import templates
@@ -23,7 +24,7 @@ MENSAJE_CREDENCIALES = (
 def formulario_login(request: Request):
     if request.session.get(SESSION_USER_KEY) is not None:
         return RedirectResponse(BANDEJA_URL, status_code=303)
-    return templates.TemplateResponse(request, "login.html", {"error": None, "email": ""})
+    return templates.TemplateResponse(request, "login.html", {"email": ""})
 
 
 @router.post("/login", response_class=HTMLResponse)
@@ -36,12 +37,8 @@ def iniciar_sesion(
 ):
     usuario = authenticate(conn, email, password, clock)
     if usuario is None:
-        return templates.TemplateResponse(
-            request,
-            "login.html",
-            {"error": MENSAJE_CREDENCIALES, "email": email},
-            status_code=401,
-        )
+        flash(request, MENSAJE_CREDENCIALES, "error")
+        return templates.TemplateResponse(request, "login.html", {"email": email}, status_code=401)
     request.session.clear()
     request.session[SESSION_USER_KEY] = usuario.id
     return RedirectResponse(BANDEJA_URL, status_code=303)
@@ -50,4 +47,5 @@ def iniciar_sesion(
 @router.post("/logout")
 def cerrar_sesion(request: Request):
     request.session.clear()
+    flash(request, "Has cerrado sesión.")
     return RedirectResponse("/login", status_code=303)

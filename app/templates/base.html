@@ -7,9 +7,19 @@
   {% block htmx_config %}<meta name="htmx-config" content='{"includeIndicatorStyles": false, "allowEval": false}'>{% endblock %}
   <title>{% block titulo %}TriageBot Pro{% endblock %}</title>
   <link rel="stylesheet" href="/static/estilos.css">
+  <link rel="stylesheet" href="/static/acabado.css">
   {% block scripts %}<script src="https://unpkg.com/htmx.org@2.0.4" defer></script>{% endblock %}
 </head>
 <body class="{% block clase_body %}{% endblock %}" hx-headers='{"X-CSRF-Token": "{{ csrf_token() }}"}'>
-  {% block cuerpo %}{% endblock %}
+  <a class="saltar" href="#contenido">Saltar al contenido</a>
+  {% block principal %}
+  {% if usuario or usuario_actual() %}{% include "_barra.html" %}{% else %}
+  <header class="barra"><div class="barra-interior"><a class="marca" href="/login">TriageBot <span>Pro</span></a></div></header>
+  {% endif %}
+  <main id="contenido" class="contenido {% block clase_main %}{% endblock %}">
+    {% include "_flash.html" %}
+    {% block cuerpo %}{% endblock %}
+  </main>
+  {% endblock %}
 </body>
 </html>

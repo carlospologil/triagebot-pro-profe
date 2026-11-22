@@ -377,6 +377,13 @@ def test_una_fecha_invalida_da_422_con_mensaje(sesion_admin):
     assert "La fecha «desde» no es válida." in r.text
 
 
+def test_un_filtro_invalido_no_muestra_el_mensaje_de_vacio(sesion_admin):
+    r = sesion_admin.get("/admin/auditoria", params={"desde": "ayer"})
+    assert r.status_code == 422
+    assert "mensaje-error" in r.text
+    assert "No hay registros de auditoría" not in r.text
+
+
 @pytest.mark.parametrize("usuario", ["99999999999999999999", str(2**63)])
 def test_un_usuario_numerico_fuera_de_rango_da_422_y_no_500(sesion_admin, usuario):
     r = sesion_admin.get("/admin/auditoria", params={"usuario": usuario})

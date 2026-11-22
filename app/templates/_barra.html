@@ -1,0 +1,23 @@
+{% set u = usuario or usuario_actual() %}
+{% set ruta = request.url.path %}
+<header class="barra">
+  <div class="barra-interior">
+    <a class="marca" href="/bandeja">TriageBot <span>Pro</span></a>
+    <nav class="navegacion" aria-label="Principal">
+      {% if not u.debe_cambiar_password %}
+      <a href="/bandeja"{% if ruta == "/bandeja" or ruta.startswith("/tickets/") %} aria-current="page"{% endif %}>Bandeja</a>
+      <a href="/panel"{% if ruta == "/panel" %} aria-current="page"{% endif %}>Panel</a>
+      {% if u.rol == "admin" %}
+      <a href="/admin/usuarios"{% if ruta.startswith("/admin/usuarios") %} aria-current="page"{% endif %}>Usuarios</a>
+      <a href="/admin/auditoria"{% if ruta.startswith("/admin/auditoria") %} aria-current="page"{% endif %}>Auditoría</a>
+      <a href="/admin"{% if ruta == "/admin" %} aria-current="page"{% endif %}>Administración</a>
+      {% endif %}
+      {% endif %}
+    </nav>
+    <form method="post" action="/logout" class="barra-usuario">
+      {{ csrf_campo() }}
+      <a class="usuario-nombre" href="/mi-cuenta"{% if ruta == "/mi-cuenta" %} aria-current="page"{% endif %} title="Mi cuenta">{{ u.nombre }}</a>
+      <button type="submit" class="boton boton-secundario boton-pequeno">Cerrar sesión</button>
+    </form>
+  </div>
+</header>

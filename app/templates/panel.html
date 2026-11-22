@@ -1,17 +1,6 @@
 {% extends "base.html" %}
 {% block titulo %}Panel · TriageBot Pro{% endblock %}
 {% block cuerpo %}
-<header class="barra">
-  <span class="marca">TriageBot <span>Pro</span></span>
-  <form method="post" action="/logout" class="barra-usuario">
-    {{ csrf_campo() }}
-    <a href="/bandeja">Bandeja</a>
-    {% if usuario.rol == "admin" %}<a href="/admin">Administración</a>{% endif %}
-    <a href="/mi-cuenta">{{ usuario.nombre }}</a>
-    <button type="submit" class="boton boton-secundario">Cerrar sesión</button>
-  </form>
-</header>
-<main class="contenido">
   <h1>Panel de métricas</h1>
   <section class="indicadores" aria-label="Indicadores generales">
     <div class="indicador"><span class="indicador-valor" id="total-tickets">{{ metricas.total }}</span><span class="indicador-texto">Tickets en total</span></div>
@@ -30,5 +19,4 @@
       {{ grafico_agentes }}
     </section>
   </div>
-</main>
 {% endblock %}

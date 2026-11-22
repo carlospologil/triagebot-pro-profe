@@ -1,0 +1,5 @@
+<div id="mensajes" class="mensajes" aria-live="polite"{% if oob %} hx-swap-oob="true"{% endif %}>
+  {% for tipo, texto in (mensajes if mensajes is defined else mensajes_flash()) %}
+  <p class="mensaje mensaje-{{ tipo }}" role="{{ "alert" if tipo == "error" else "status" }}">{{ texto }}</p>
+  {% endfor %}
+</div>

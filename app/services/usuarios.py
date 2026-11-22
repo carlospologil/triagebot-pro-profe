@@ -14,11 +14,20 @@ ROLES = ("admin", "agente")
 
 
 class UsuarioError(ValueError):
-    """Datos de usuario inválidos."""
+    """Datos de usuario inválidos. `campo` indica el campo del formulario afectado, si lo hay."""
+
+    campo: str | None = None
+
+    def __init__(self, mensaje: str, campo: str | None = None) -> None:
+        super().__init__(mensaje)
+        if campo is not None:
+            self.campo = campo
 
 
 class EmailDuplicadoError(UsuarioError):
     """Ya existe un usuario con ese email."""
+
+    campo = "email"
 
 
 class UsuarioNoEncontradoError(UsuarioError):
@@ -31,6 +40,8 @@ class ProteccionError(UsuarioError):
 
 class PasswordActualIncorrectaError(UsuarioError):
     """La contraseña actual indicada no coincide."""
+
+    campo = "actual"
 
 
 @dataclass(frozen=True)
@@ -75,11 +86,11 @@ def create_user(
     email = normalize_email(email)
     nombre = nombre.strip()
     if "@" not in email or email.startswith("@") or email.endswith("@"):
-        raise UsuarioError("El email no es válido.")
+        raise UsuarioError("El email no es válido.", "email")
     if not nombre:
-        raise UsuarioError("El nombre no puede estar vacío.")
+        raise UsuarioError("El nombre no puede estar vacío.", "nombre")
     if rol not in ROLES:
-        raise UsuarioError(f"Rol no válido: debe ser uno de {', '.join(ROLES)}.")
+        raise UsuarioError(f"Rol no válido: debe ser uno de {', '.join(ROLES)}.", "rol")
     password_hash = hash_password(password)
     ahora = to_iso(clock())
     try:
@@ -265,7 +276,7 @@ def cambiar_password(
     """Cambia la contraseña del propio usuario exigiendo la actual."""
     validate_password(nueva)
     if nueva == actual:
-        raise UsuarioError("La nueva contraseña debe ser distinta de la actual.")
+        raise UsuarioError("La nueva contraseña debe ser distinta de la actual.", "nueva")
     nuevo_hash = hash_password(nueva)
     with _transaccion(conn):
         row = _cargar(conn, user_id)

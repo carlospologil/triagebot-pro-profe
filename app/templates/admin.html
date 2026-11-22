@@ -1,22 +1,10 @@
 {% extends "base.html" %}
 {% block titulo %}Administración · TriageBot Pro{% endblock %}
 {% block cuerpo %}
-<header class="barra">
-  <span class="marca">TriageBot <span>Pro</span></span>
-  <form method="post" action="/logout" class="barra-usuario">
-    {{ csrf_campo() }}
-    <a href="/bandeja">Bandeja</a>
-    <a href="/panel">Panel</a>
-    <a href="/mi-cuenta">{{ usuario.nombre }}</a>
-    <button type="submit" class="boton boton-secundario">Cerrar sesión</button>
-  </form>
-</header>
-<main class="contenido">
   <h1>Administración</h1>
   <p>Gestiona el equipo y consulta la auditoría.</p>
-  <p>
+  <p class="acciones-fila">
     <a class="boton" href="/admin/usuarios">Gestionar usuarios</a>
     <a class="boton boton-secundario" href="/admin/auditoria">Ver auditoría</a>
   </p>
-</main>
 {% endblock %}

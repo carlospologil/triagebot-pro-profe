@@ -1,17 +1,6 @@
 {% extends "base.html" %}
 {% block titulo %}Auditoría · TriageBot Pro{% endblock %}
 {% block cuerpo %}
-<header class="barra">
-  <span class="marca">TriageBot <span>Pro</span></span>
-  <form method="post" action="/logout" class="barra-usuario">
-    {{ csrf_campo() }}
-    <a href="/bandeja">Bandeja</a>
-    <a href="/admin">Administración</a>
-    <a href="/mi-cuenta">{{ usuario.nombre }}</a>
-    <button type="submit" class="boton boton-secundario">Cerrar sesión</button>
-  </form>
-</header>
-<main class="contenido">
   <p class="migas"><a href="/admin">&larr; Administración</a></p>
   <h1>Auditoría</h1>
   <form id="filtros" class="filtros" method="get" action="/admin/auditoria">
@@ -44,7 +33,6 @@
     <button type="submit" class="boton">Filtrar</button>
     <a href="/admin/auditoria" class="boton boton-secundario">Limpiar</a>
   </form>
-  {% if error %}<p class="alerta alerta-error" role="alert">{{ error }}</p>{% endif %}
   {% if pagina.items %}
   <p class="resumen-tabla">{{ pagina.total }} registro{{ "s" if pagina.total != 1 }}</p>
   <div class="tabla-envoltorio">
@@ -82,8 +70,7 @@
     {% if pagina.page < pagina.paginas %}<a class="boton boton-secundario" href="/admin/auditoria?{{ consulta }}page={{ pagina.page + 1 }}">Siguiente &rarr;</a>{% else %}<span class="boton boton-secundario boton-desactivado">Siguiente &rarr;</span>{% endif %}
   </nav>
   {% endif %}
-  {% elif not error %}
+  {% elif not filtro_invalido %}
   <p class="vacio">No hay registros de auditoría con estos filtros.</p>
   {% endif %}
-</main>
 {% endblock %}

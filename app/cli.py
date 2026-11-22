@@ -10,7 +10,7 @@ from app.auth import PasswordTooShortError
 from app.clock import system_clock
 from app.config import ConfigError, load_settings
 from app.db import connect, migrate
-from app.services import importacion
+from app.services import demo, importacion
 from app.services.clasificador import crear_cliente
 from app.services.usuarios import UsuarioError, create_user
 
@@ -73,6 +73,24 @@ def _importar(args: argparse.Namespace) -> int:
     return 0
 
 
+def _demo(args: argparse.Namespace) -> int:
+    settings = load_settings()
+    conn = connect(settings.database_path)
+    try:
+        migrate(conn)
+        credenciales = demo.crear_datos_demo(conn, system_clock)
+    except UsuarioError as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        return 1
+    finally:
+        conn.close()
+    print(f"Datos de demostración creados: 1 admin, 3 agentes y {demo.TOTAL_TICKETS} tickets.")
+    print("Credenciales:")
+    for email, rol, password in credenciales:
+        print(f"  {rol:<7} {email}  {password}")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="app.cli", description="Administración de TriageBot Pro")
     subparsers = parser.add_subparsers(dest="comando", required=True)
@@ -90,6 +108,9 @@ def build_parser() -> argparse.ArgumentParser:
         help="No llama a la IA: los tickets quedan con categoría sin_clasificar",
     )
     importar.set_defaults(func=_importar)
+    subparsers.add_parser(
+        "demo", help="Crea datos de demostración (usuarios y tickets) sin llamar a la IA"
+    ).set_defaults(func=_demo)
     return parser
 
 

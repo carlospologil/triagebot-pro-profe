@@ -8,6 +8,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from app.auth import PasswordTooShortError
 from app.clock import Clock, get_clock
 from app.db import get_db
+from app.flash import flash
 from app.permisos import require_role
 from app.services import auditoria
 from app.services import usuarios as servicio
@@ -25,7 +26,6 @@ Reloj = Annotated[Clock, Depends(get_clock)]
 Admin = Annotated[Usuario, Depends(solo_admin)]
 
 USUARIOS_URL = "/admin/usuarios"
-CLAVE_AVISO = "aviso_usuarios"
 
 
 @router.get("", response_class=HTMLResponse)
@@ -39,17 +39,26 @@ def _pagina_usuarios(
     usuario: Usuario,
     *,
     error: str | None = None,
+    errores: dict[str, str] | None = None,
     status: int = 200,
     temporal: tuple[str, str] | None = None,
     formulario: dict[str, str] | None = None,
 ):
-    """Lista de usuarios. `temporal` es (email, contraseña) y solo se muestra en esta respuesta."""
+    """Lista de usuarios. `temporal` es (email, contraseña) y solo se muestra en esta respuesta.
+
+    `errores` asocia mensajes a campos del formulario de alta; `error` es un fallo general."""
+    if errores:
+        flash(request, "No se ha creado el usuario: revisa los campos marcados.", "error")
+    elif error:
+        flash(request, error, "error")
     contexto = {
         "usuario": usuario,
         "usuarios": servicio.listar_usuarios(conn),
         "roles": servicio.ROLES,
-        "error": error,
-        "aviso": request.session.pop(CLAVE_AVISO, None),
+        "opciones_rol": [
+            (r, "Administrador" if r == "admin" else "Agente") for r in servicio.ROLES
+        ],
+        "errores": errores or {},
         "temporal": temporal,
         "formulario": formulario or {"email": "", "nombre": "", "rol": "agente"},
         "fecha": formatear_fecha,
@@ -68,7 +77,7 @@ def _fallo(request: Request, conn: sqlite3.Connection, usuario: Usuario, exc: Va
 
 
 def _hecho(request: Request, aviso: str) -> RedirectResponse:
-    request.session[CLAVE_AVISO] = aviso
+    flash(request, aviso)
     return RedirectResponse(USUARIOS_URL, status_code=303)
 
 
@@ -104,11 +113,20 @@ def crear_usuario(
         )
     except (servicio.UsuarioError, PasswordTooShortError) as exc:
         status = 409 if isinstance(exc, servicio.EmailDuplicadoError) else 422
+        if isinstance(exc, PasswordTooShortError):
+            campo = "password"
+        else:
+            campo = getattr(exc, "campo", None)
+        if campo is None:
+            return _pagina_usuarios(
+                request, conn, usuario, error=str(exc), status=status, formulario=formulario
+            )
         return _pagina_usuarios(
-            request, conn, usuario, error=str(exc), status=status, formulario=formulario
+            request, conn, usuario, errores={campo: str(exc)}, status=status, formulario=formulario
         )
     if password:
         return _hecho(request, f"Usuario {nuevo.email} creado. Deberá cambiar la contraseña.")
+    flash(request, f"Usuario {nuevo.email} creado con una contraseña temporal.")
     return _pagina_usuarios(request, conn, usuario, temporal=(nuevo.email, inicial))
 
 
@@ -154,6 +172,7 @@ def restablecer_password(request: Request, user_id: int, conn: Db, usuario: Admi
     except servicio.UsuarioError as exc:
         return _fallo(request, conn, usuario, exc)
     destino = servicio.get_user(conn, user_id)
+    flash(request, f"Contraseña de {destino.email} restablecida.")
     return _pagina_usuarios(request, conn, usuario, temporal=(destino.email, temporal))
 
 
@@ -175,12 +194,12 @@ def ver_auditoria(
         "desde": desde.strip(),
         "hasta": hasta.strip(),
     }
-    error = None
     status = 200
     try:
         pagina = auditoria.listar(conn, page=page, **filtros)
     except auditoria.FiltroInvalidoError as exc:
-        error, status = str(exc), 422
+        flash(request, str(exc), "error")
+        status = 422
         pagina = auditoria.PaginaAuditoria(
             items=[], total=0, page=1, page_size=auditoria.TAMANO_PAGINA, paginas=0
         )
@@ -189,7 +208,7 @@ def ver_auditoria(
         "usuario": usuario,
         "pagina": pagina,
         "filtros": filtros,
-        "error": error,
+        "filtro_invalido": status == 422,
         "consulta": consulta + "&" if consulta else "",
         "usuarios": conn.execute(
             "SELECT id, nombre, email FROM usuarios ORDER BY nombre, id"

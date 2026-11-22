@@ -12,6 +12,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
 from app.clock import Clock, get_clock
 from app.db import get_db
+from app.flash import flash
 from app.services import auditoria, comentarios
 from app.services import tickets as servicio
 from app.services.formato import (
@@ -28,6 +29,13 @@ from app.templating import templates
 router = APIRouter(prefix="/tickets")
 
 MAX_ENTERO_SQLITE = 2**63 - 1
+MENSAJES_OK = {
+    "estado": "Estado actualizado.",
+    "asignacion": "Asignación actualizada.",
+    "clasificacion": "Clasificación corregida.",
+    "comentarios": "Comentario añadido.",
+}
+MENSAJE_ERROR = "No se ha guardado el cambio: revisa el error indicado."
 
 Db = Annotated[sqlite3.Connection, Depends(get_db)]
 RelojDep = Annotated[Clock, Depends(get_clock)]
@@ -103,7 +111,9 @@ def _resultado(
     borrador: str = "",
 ) -> Response:
     """Respuesta de una acción: fragmento HTMX, redirección o página completa con el error."""
+    mensaje = (MENSAJES_OK[panel], "ok") if error is None else (MENSAJE_ERROR, "error")
     if not _es_htmx(request):
+        flash(request, *mensaje)
         if error is None:
             return RedirectResponse(f"/tickets/{ticket_id}", status_code=303)
         return _pagina(request, conn, ticket_id, {panel: error}, status, borrador)
@@ -111,6 +121,9 @@ def _resultado(
         request, conn, _cargar(conn, ticket_id), {panel: error} if error else {}, borrador
     )
     html = templates.get_template(f"_panel_{panel}.html").render(contexto)
+    html += templates.get_template("_flash.html").render(
+        {"mensajes": [(mensaje[1], mensaje[0])], "oob": True}
+    )
     html += templates.get_template("_fechas.html").render({**contexto, "oob": True})
     html += templates.get_template("_historial.html").render({**contexto, "oob": True})
     return HTMLResponse(

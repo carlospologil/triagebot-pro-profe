@@ -1,0 +1,25 @@
+{#- Campo de formulario con etiqueta, ayuda y error junto al campo. `atributos` son literales de plantilla. -#}
+{% macro campo(id, nombre, etiqueta, errores, tipo="text", valor="", ayuda="", atributos="", clase="campo") -%}
+<div class="{{ clase }}{% if errores and errores.get(nombre) %} campo-con-error{% endif %}">
+  <label for="{{ id }}">{{ etiqueta }}</label>
+  <input id="{{ id }}" name="{{ nombre }}" type="{{ tipo }}"{% if tipo != "password" %} value="{{ valor }}"{% endif %}
+    {%- set describe = [] %}
+    {%- if ayuda %}{% set _ = describe.append("ayuda-" ~ id) %}{% endif %}
+    {%- if errores and errores.get(nombre) %}{% set _ = describe.append("error-" ~ id) %} aria-invalid="true"{% endif %}
+    {%- if describe %} aria-describedby="{{ describe|join(" ") }}"{% endif %} {{ atributos|safe }}>
+  {% if ayuda %}<span id="ayuda-{{ id }}" class="ayuda">{{ ayuda }}</span>{% endif %}
+  {% if errores and errores.get(nombre) %}<p id="error-{{ id }}" class="error-campo">{{ errores.get(nombre) }}</p>{% endif %}
+</div>
+{%- endmacro %}
+
+{% macro selector(id, nombre, etiqueta, opciones, seleccionado, errores, clase="campo") -%}
+<div class="{{ clase }}{% if errores and errores.get(nombre) %} campo-con-error{% endif %}">
+  <label for="{{ id }}">{{ etiqueta }}</label>
+  <select id="{{ id }}" name="{{ nombre }}"{% if errores and errores.get(nombre) %} aria-invalid="true" aria-describedby="error-{{ id }}"{% endif %}>
+    {% for valor, texto in opciones %}
+    <option value="{{ valor }}"{% if seleccionado == valor %} selected{% endif %}>{{ texto }}</option>
+    {% endfor %}
+  </select>
+  {% if errores and errores.get(nombre) %}<p id="error-{{ id }}" class="error-campo">{{ errores.get(nombre) }}</p>{% endif %}
+</div>
+{%- endmacro %}

@@ -1,20 +1,17 @@
 {% extends "base.html" %}
+{% from "_campos.html" import campo %}
 {% block titulo %}Iniciar sesión · TriageBot Pro{% endblock %}
 {% block scripts %}{% endblock %}
 {% block clase_body %}pagina-login{% endblock %}
-{% block cuerpo %}
-<main class="tarjeta-login">
+{% block principal %}
+<main id="contenido" class="tarjeta-login">
   <h1 class="marca">TriageBot <span>Pro</span></h1>
   <p class="subtitulo">Accede con tu cuenta del equipo de soporte</p>
-  {% if error %}
-  <p class="alerta alerta-error" role="alert">{{ error }}</p>
-  {% endif %}
+  {% include "_flash.html" %}
   <form method="post" action="/login" class="formulario">
     {{ csrf_campo() }}
-    <label for="email">Correo electrónico</label>
-    <input id="email" name="email" type="email" value="{{ email }}" autocomplete="username" required autofocus>
-    <label for="password">Contraseña</label>
-    <input id="password" name="password" type="password" autocomplete="current-password" required>
+    {{ campo("email", "email", "Correo electrónico", errores, tipo="email", valor=email, atributos='autocomplete="username" required autofocus') }}
+    {{ campo("password", "password", "Contraseña", errores, tipo="password", atributos='autocomplete="current-password" required') }}
     <button type="submit" class="boton">Iniciar sesión</button>
   </form>
 </main>

@@ -1,17 +1,6 @@
 {% extends "base.html" %}
 {% block titulo %}Bandeja · TriageBot Pro{% endblock %}
 {% block cuerpo %}
-<header class="barra">
-  <span class="marca">TriageBot <span>Pro</span></span>
-  <form method="post" action="/logout" class="barra-usuario">
-    {{ csrf_campo() }}
-    <a href="/panel">Panel</a>
-    {% if usuario.rol == "admin" %}<a href="/admin">Administración</a>{% endif %}
-    <a href="/mi-cuenta">{{ usuario.nombre }}</a>
-    <button type="submit" class="boton boton-secundario">Cerrar sesión</button>
-  </form>
-</header>
-<main class="contenido">
   <h1>Bandeja</h1>
   <form id="filtros" class="filtros" method="get" action="/bandeja"
         hx-get="/bandeja" hx-target="#tabla-tickets" hx-push-url="true" hx-sync="this:replace"
@@ -71,5 +60,4 @@
   <div id="tabla-tickets" aria-live="polite">
     {% include "_tabla_tickets.html" %}
   </div>
-</main>
 {% endblock %}

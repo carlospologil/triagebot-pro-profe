@@ -1,17 +1,7 @@
 {% extends "base.html" %}
+{% from "_campos.html" import campo, selector %}
 {% block titulo %}Usuarios · TriageBot Pro{% endblock %}
 {% block cuerpo %}
-<header class="barra">
-  <span class="marca">TriageBot <span>Pro</span></span>
-  <form method="post" action="/logout" class="barra-usuario">
-    {{ csrf_campo() }}
-    <a href="/bandeja">Bandeja</a>
-    <a href="/admin">Administración</a>
-    <a href="/mi-cuenta">{{ usuario.nombre }}</a>
-    <button type="submit" class="boton boton-secundario">Cerrar sesión</button>
-  </form>
-</header>
-<main class="contenido">
   <p class="migas"><a href="/admin">&larr; Administración</a></p>
   <h1>Usuarios</h1>
   {% if temporal %}
@@ -20,31 +10,13 @@
     <p><code class="password-temporal">{{ temporal[1] }}</code></p>
   </section>
   {% endif %}
-  {% if aviso %}<p class="alerta alerta-ok" role="status">{{ aviso }}</p>{% endif %}
-  {% if error %}<p class="alerta alerta-error" role="alert">{{ error }}</p>{% endif %}
 
-  <form class="filtros" method="post" action="/admin/usuarios">
+  <form class="filtros formulario-alta" method="post" action="/admin/usuarios">
     {{ csrf_campo() }}
-    <div class="filtro">
-      <label for="nuevo-nombre">Nombre</label>
-      <input id="nuevo-nombre" name="nombre" type="text" value="{{ formulario.nombre }}" required>
-    </div>
-    <div class="filtro">
-      <label for="nuevo-email">Correo electrónico</label>
-      <input id="nuevo-email" name="email" type="email" value="{{ formulario.email }}" required>
-    </div>
-    <div class="filtro">
-      <label for="nuevo-rol">Rol</label>
-      <select id="nuevo-rol" name="rol">
-        {% for r in roles %}
-        <option value="{{ r }}"{% if formulario.rol == r %} selected{% endif %}>{{ "Administrador" if r == "admin" else "Agente" }}</option>
-        {% endfor %}
-      </select>
-    </div>
-    <div class="filtro">
-      <label for="nuevo-password">Contraseña inicial (opcional)</label>
-      <input id="nuevo-password" name="password" type="password" autocomplete="new-password" placeholder="Se genera una temporal">
-    </div>
+    {{ campo("nuevo-nombre", "nombre", "Nombre", errores, valor=formulario.nombre, atributos="required", clase="filtro") }}
+    {{ campo("nuevo-email", "email", "Correo electrónico", errores, tipo="email", valor=formulario.email, atributos="required", clase="filtro") }}
+    {{ selector("nuevo-rol", "rol", "Rol", opciones_rol, formulario.rol, errores, clase="filtro") }}
+    {{ campo("nuevo-password", "password", "Contraseña inicial (opcional)", errores, tipo="password", atributos='autocomplete="new-password" placeholder="Se genera una temporal"', clase="filtro") }}
     <button type="submit" class="boton">Crear usuario</button>
   </form>
 
@@ -108,5 +80,4 @@
       </tbody>
     </table>
   </div>
-</main>
 {% endblock %}

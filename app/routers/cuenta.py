@@ -7,6 +7,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from app.auth import MIN_PASSWORD_LENGTH, PasswordTooShortError
 from app.clock import Clock, get_clock
 from app.db import get_db
+from app.flash import flash
 from app.middleware import CUENTA_URL
 from app.permisos import require_role
 from app.services import usuarios as servicio
@@ -16,14 +17,20 @@ from app.templating import templates
 router = APIRouter()
 
 cualquier_usuario = require_role(*servicio.ROLES)
-CLAVE_AVISO = "aviso_cuenta"
 
 
-def _pagina(request: Request, usuario: Usuario, *, error: str | None = None, status: int = 200):
+def _pagina(
+    request: Request,
+    usuario: Usuario,
+    *,
+    errores: dict[str, str] | None = None,
+    status: int = 200,
+):
+    if errores:
+        flash(request, "No se ha cambiado la contraseña: revisa los campos marcados.", "error")
     contexto = {
         "usuario": usuario,
-        "error": error,
-        "aviso": request.session.pop(CLAVE_AVISO, None),
+        "errores": errores or {},
         "min_password": MIN_PASSWORD_LENGTH,
     }
     return templates.TemplateResponse(request, "cuenta.html", contexto, status_code=status)
@@ -45,10 +52,13 @@ def cambiar_password(
     confirmacion: Annotated[str, Form()] = "",
 ):
     if nueva != confirmacion:
-        return _pagina(request, usuario, error="La confirmación no coincide.", status=422)
+        errores = {"confirmacion": "La confirmación no coincide."}
+        return _pagina(request, usuario, errores=errores, status=422)
     try:
         servicio.cambiar_password(conn, usuario.id, actual, nueva, clock=reloj)
-    except (servicio.UsuarioError, PasswordTooShortError) as exc:
-        return _pagina(request, usuario, error=str(exc), status=422)
-    request.session[CLAVE_AVISO] = "Contraseña actualizada."
+    except PasswordTooShortError as exc:
+        return _pagina(request, usuario, errores={"nueva": str(exc)}, status=422)
+    except servicio.UsuarioError as exc:
+        return _pagina(request, usuario, errores={exc.campo or "actual": str(exc)}, status=422)
+    flash(request, "Contraseña actualizada.")
     return RedirectResponse(CUENTA_URL, status_code=303)

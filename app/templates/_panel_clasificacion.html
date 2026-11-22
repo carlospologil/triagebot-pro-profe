@@ -10,7 +10,6 @@
   <p class="justificacion">
     {% if t.resumen_ia %}<strong>Justificación de la IA:</strong> {{ t.resumen_ia }}{% else %}<span class="tenue">Sin justificación de la IA.</span>{% endif %}
   </p>
-  {% if errores.clasificacion %}<p class="alerta alerta-error" role="alert">{{ errores.clasificacion }}</p>{% endif %}
   <form method="post" action="/tickets/{{ t.id }}/clasificacion" class="form-panel"
         hx-post="/tickets/{{ t.id }}/clasificacion" hx-target="#panel-clasificacion" hx-swap="outerHTML">
     {{ csrf_campo() }}
@@ -27,6 +26,7 @@
       <option value="{{ clave }}"{% if t.prioridad == clave %} selected{% endif %}>{{ texto }}</option>
       {% endfor %}
     </select>
+    {% if errores.clasificacion %}<p id="error-clasificacion" class="error-campo" role="alert">{{ errores.clasificacion }}</p>{% endif %}
     <button type="submit" class="boton">Guardar corrección</button>
   </form>
 </section>

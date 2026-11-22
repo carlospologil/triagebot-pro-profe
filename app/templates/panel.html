@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block titulo %}Panel · TriageBot Pro{% endblock %}
+{% block cuerpo %}
+<header class="barra">
+  <span class="marca">TriageBot <span>Pro</span></span>
+  <form method="post" action="/logout" class="barra-usuario">
+    <a href="/bandeja">Bandeja</a>
+    {% if usuario.rol == "admin" %}<a href="/admin">Administración</a>{% endif %}
+    <span>{{ usuario.nombre }}</span>
+    <button type="submit" class="boton boton-secundario">Cerrar sesión</button>
+  </form>
+</header>
+<main class="contenido">
+  <h1>Panel de métricas</h1>
+  <section class="indicadores" aria-label="Indicadores generales">
+    <div class="indicador"><span class="indicador-valor" id="total-tickets">{{ metricas.total }}</span><span class="indicador-texto">Tickets en total</span></div>
+    <div class="indicador{% if metricas.vencidos %} indicador-alerta{% endif %}"><span class="indicador-valor" id="tickets-vencidos">{{ metricas.vencidos }}</span><span class="indicador-texto">Vencidos</span></div>
+    <div class="indicador"><span class="indicador-valor" id="tiempo-medio">{{ tiempo_medio }}</span><span class="indicador-texto">Tiempo medio de resolución</span></div>
+  </section>
+  <div class="graficos">
+    {% for titulo, svg in graficos %}
+    <section class="tarjeta-grafico">
+      <h2>{{ titulo }}</h2>
+      {{ svg }}
+    </section>
+    {% endfor %}
+    <section class="tarjeta-grafico">
+      <h2>{{ titulo_agentes }}</h2>
+      {{ grafico_agentes }}
+    </section>
+  </div>
+</main>
+{% endblock %}

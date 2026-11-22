@@ -14,7 +14,7 @@ from app.clock import Clock, system_clock
 from app.config import Settings, load_settings
 from app.db import connect, init_db
 from app.middleware import exigir_sesion
-from app.routers import admin, bandeja, detalle, health, sesion, tickets
+from app.routers import admin, bandeja, detalle, health, panel, sesion, tickets
 from app.services import sla
 from app.templating import templates
 
@@ -59,6 +59,7 @@ def create_app(settings: Settings | None = None, clock: Clock = system_clock) ->
     application.include_router(bandeja.router)
     application.include_router(detalle.router)
     application.include_router(admin.router)
+    application.include_router(panel.router)
     application.include_router(tickets.router)
     application.add_exception_handler(StarletteHTTPException, _manejar_http)
     return application

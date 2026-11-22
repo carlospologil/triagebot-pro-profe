@@ -231,3 +231,29 @@ body {
 a.boton { display: inline-block; text-decoration: none; }
 .col-fecha { white-space: nowrap; color: var(--color-suave); }
 .col-valor { overflow-wrap: anywhere; min-width: 8rem; }
+
+.indicadores { display: flex; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem; }
+.indicador {
+  flex: 1 1 12rem;
+  display: flex;
+  flex-direction: column;
+  padding: 1rem 1.25rem;
+  background: #fff;
+  border: 1px solid var(--color-borde);
+  border-radius: 12px;
+}
+.indicador-valor { font-size: 2rem; font-weight: 700; }
+.indicador-texto { color: var(--color-suave); font-size: 0.9rem; }
+.indicador-alerta .indicador-valor { color: var(--color-error); }
+.graficos { display: grid; grid-template-columns: repeat(auto-fit, minmax(22rem, 1fr)); gap: 1rem; }
+.tarjeta-grafico {
+  padding: 1rem 1.25rem;
+  background: #fff;
+  border: 1px solid var(--color-borde);
+  border-radius: 12px;
+}
+.tarjeta-grafico h2 { margin: 0 0 0.5rem; font-size: 1.05rem; }
+.grafico { width: 100%; height: auto; }
+.grafico-barra { fill: var(--color-primario); }
+.grafico-etiqueta, .grafico-valor { font-size: 13px; fill: var(--color-texto); }
+.grafico-valor { font-weight: 700; }

@@ -93,17 +93,19 @@ def crear_ticket(
     clock: Clock = system_clock,
     *,
     usuario_id: int | None = None,
+    categoria: str | None = None,
 ) -> TicketSalida:
     ahora = to_iso(clock())
     cursor = conn.execute(
         "INSERT INTO tickets (asunto, descripcion, solicitante_nombre, solicitante_email, "
-        "estado, prioridad, fecha_limite, creado_en, actualizado_en) "
-        "VALUES (?, ?, ?, ?, 'nuevo', 'media', ?, ?, ?)",
+        "estado, prioridad, categoria, fecha_limite, creado_en, actualizado_en) "
+        "VALUES (?, ?, ?, ?, 'nuevo', 'media', ?, ?, ?, ?)",
         (
             datos.asunto,
             datos.texto,
             datos.nombre_cliente or datos.email_cliente,
             datos.email_cliente,
+            categoria,
             sla.calcular_fecha_limite(ahora, "media"),
             ahora,
             ahora,
@@ -273,6 +275,35 @@ def listar_bandeja(
         page_size=page_size,
         paginas=paginas,
     )
+
+
+def listar_para_exportar(
+    conn: sqlite3.Connection,
+    *,
+    estado: str | None = None,
+    categoria: str | None = None,
+    prioridad: str | None = None,
+    asignado_a: int | str | None = None,
+    q: str | None = None,
+    solo_vencidos: bool = False,
+    clock: Clock = system_clock,
+) -> list[sqlite3.Row]:
+    """Todos los tickets que cumplen los filtros de la bandeja (sin paginar), con el asignado."""
+    where, parametros = _construir_where(
+        estado=estado,
+        categoria=categoria,
+        prioridad=prioridad,
+        asignado_a=asignado_a,
+        q=q,
+        columnas_busqueda=("asunto", "descripcion", "solicitante_nombre", "solicitante_email"),
+        vencidos_a=to_iso(clock()) if solo_vencidos else None,
+    )
+    return conn.execute(
+        "SELECT tickets.*, usuarios.nombre AS asignado_nombre "
+        "FROM tickets LEFT JOIN usuarios ON usuarios.id = tickets.asignado_a"
+        f"{where} ORDER BY tickets.creado_en DESC, tickets.id DESC",
+        parametros,
+    ).fetchall()
 
 
 def listar_tickets(

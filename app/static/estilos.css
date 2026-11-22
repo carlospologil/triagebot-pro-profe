@@ -116,7 +116,9 @@ body {
 .filtro-casilla { flex-direction: row; align-items: center; gap: 0.4rem; padding-bottom: 0.5rem; }
 .filtro-casilla label { font-size: 0.9rem; color: var(--color-texto); }
 
-.resumen-tabla { color: var(--color-suave); font-size: 0.9rem; margin: 0 0 0.5rem; }
+.cabecera-tabla { display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin-bottom: 0.5rem; }
+.cabecera-tabla .boton { padding: 0.35rem 0.9rem; font-size: 0.9rem; }
+.resumen-tabla { color: var(--color-suave); font-size: 0.9rem; margin: 0; }
 .tabla-envoltorio {
   overflow-x: auto;
   background: #fff;

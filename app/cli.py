@@ -4,10 +4,14 @@ import argparse
 import getpass
 import sys
 from collections.abc import Sequence
+from pathlib import Path
 
 from app.auth import PasswordTooShortError
+from app.clock import system_clock
 from app.config import ConfigError, load_settings
 from app.db import connect, migrate
+from app.services import importacion
+from app.services.clasificador import crear_cliente
 from app.services.usuarios import UsuarioError, create_user
 
 
@@ -32,6 +36,43 @@ def _crear_admin(args: argparse.Namespace) -> int:
     return 0
 
 
+def _importar(args: argparse.Namespace) -> int:
+    settings = load_settings()
+    try:
+        filas = importacion.leer_filas(Path(args.ruta))
+    except importacion.ImportacionError as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        return 1
+    clasificar = not args.sin_clasificar
+    cliente = None
+    if clasificar:
+        if settings.openrouter_api_key:
+            cliente = crear_cliente(settings.openrouter_api_key)
+        else:
+            print(
+                "Aviso: OPENROUTER_API_KEY no está definida; los tickets quedarán sin clasificar.",
+                file=sys.stderr,
+            )
+    conn = connect(settings.database_path)
+    try:
+        migrate(conn)
+        resultado = importacion.importar_tickets(
+            conn, filas, cliente, system_clock, clasificar=clasificar
+        )
+    finally:
+        conn.close()
+    for motivo in resultado.saltados:
+        print(f"Saltada: {motivo}", file=sys.stderr)
+    if clasificar and resultado.sin_clasificar:
+        print(
+            f"Aviso: {resultado.sin_clasificar} ticket(s) no se pudieron clasificar "
+            "y quedan como sin_clasificar.",
+            file=sys.stderr,
+        )
+    print(f"Importados: {resultado.importados}. Saltados: {len(resultado.saltados)}.")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="app.cli", description="Administración de TriageBot Pro")
     subparsers = parser.add_subparsers(dest="comando", required=True)
@@ -39,6 +80,16 @@ def build_parser() -> argparse.ArgumentParser:
     admin.add_argument("--email", required=True)
     admin.add_argument("--nombre", required=True)
     admin.set_defaults(func=_crear_admin)
+    importar = subparsers.add_parser(
+        "importar", help="Importa tickets desde un CSV (columna texto) o un JSON (lista de objetos)"
+    )
+    importar.add_argument("ruta", metavar="RUTA", help="Fichero .csv o .json")
+    importar.add_argument(
+        "--sin-clasificar",
+        action="store_true",
+        help="No llama a la IA: los tickets quedan con categoría sin_clasificar",
+    )
+    importar.set_defaults(func=_importar)
     return parser
 
 

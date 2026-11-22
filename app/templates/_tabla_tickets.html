@@ -1,7 +1,11 @@
-<p class="resumen-tabla">
-  {% if pagina.total == 1 %}1 ticket{% else %}{{ pagina.total }} tickets{% endif %}
-  {% if hay_filtros %}con los filtros aplicados{% endif %}
-</p>
+<div class="cabecera-tabla">
+  <p class="resumen-tabla">
+    {% if pagina.total == 1 %}1 ticket{% else %}{{ pagina.total }} tickets{% endif %}
+    {% if hay_filtros %}con los filtros aplicados{% endif %}
+  </p>
+  <a id="exportar" class="boton boton-secundario" href="{{ url_exportar }}" download
+     title="Descarga en CSV (compatible con Excel) todos los tickets que cumplen los filtros">Exportar</a>
+</div>
 {% if pagina.items %}
 <div class="tabla-envoltorio">
   <table class="tabla-tickets">

@@ -1,7 +1,7 @@
 import sqlite3
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 
 from app.clock import Clock, get_clock
 from app.db import get_db
@@ -14,8 +14,10 @@ from app.schemas import (
     TicketCrear,
     TicketSalida,
 )
+from app.services import exportacion
 from app.services import tickets as servicio
 from app.services.clasificador import ClasificacionError, get_cliente_llm
+from app.services.filtros import interpretar_filtros
 
 router = APIRouter(prefix="/api/tickets", tags=["tickets"])
 
@@ -76,6 +78,49 @@ def listar(
         prioridad=prioridad,
         asignado_a=asignado_a,
         q=q,
+    )
+
+
+@router.get("/export.csv", response_class=Response)
+def exportar(
+    request: Request,
+    conn: Db,
+    clock: RelojDep,
+    estado: str = "",
+    categoria: str = "",
+    prioridad: str = "",
+    asignado_a: str = "",
+    mios: str = "",
+    vencidos: str = "",
+    q: str = "",
+):
+    """Descarga en CSV (UTF-8, apto para Excel) los tickets que filtra la bandeja con esos mismos
+    parámetros, sin paginar."""
+    f = interpretar_filtros(
+        usuario_id=request.state.usuario.id,
+        estado=estado,
+        categoria=categoria,
+        prioridad=prioridad,
+        asignado_a=asignado_a,
+        mios=mios,
+        vencidos=vencidos,
+        q=q,
+    )
+    filas = servicio.listar_para_exportar(
+        conn,
+        estado=f.estado,
+        categoria=f.categoria,
+        prioridad=f.prioridad,
+        asignado_a=f.asignado_a,
+        q=f.q,
+        solo_vencidos=f.solo_vencidos,
+        clock=clock,
+    )
+    nombre = f"tickets-{clock().strftime('%Y-%m-%d')}.csv"
+    return Response(
+        exportacion.tickets_a_csv(filas),
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{nombre}"'},
     )
 
 

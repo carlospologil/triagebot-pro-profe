@@ -14,3 +14,6 @@ select = ["E", "F", "W", "I", "B", "UP"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
+markers = [
+    "csrf_estricto: el cliente de pruebas no añade el token CSRF automáticamente",
+]

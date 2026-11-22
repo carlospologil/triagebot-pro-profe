@@ -10,6 +10,7 @@
   <p class="alerta alerta-error" role="alert">{{ error }}</p>
   {% endif %}
   <form method="post" action="/login" class="formulario">
+    {{ csrf_campo() }}
     <label for="email">Correo electrónico</label>
     <input id="email" name="email" type="email" value="{{ email }}" autocomplete="username" required autofocus>
     <label for="password">Contraseña</label>

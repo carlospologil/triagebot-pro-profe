@@ -13,6 +13,7 @@
   {% if errores.clasificacion %}<p class="alerta alerta-error" role="alert">{{ errores.clasificacion }}</p>{% endif %}
   <form method="post" action="/tickets/{{ t.id }}/clasificacion" class="form-panel"
         hx-post="/tickets/{{ t.id }}/clasificacion" hx-target="#panel-clasificacion" hx-swap="outerHTML">
+    {{ csrf_campo() }}
     <label for="categoria">Categoría</label>
     <select id="categoria" name="categoria">
       {% if not t.categoria %}<option value="" selected disabled>Sin clasificar</option>{% endif %}

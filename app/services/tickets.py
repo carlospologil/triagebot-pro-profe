@@ -160,7 +160,7 @@ def clasificar_ticket(
         }
     ahora = to_iso(clock())
     cambios["actualizado_en"] = ahora
-    asignaciones = ", ".join(f"{columna} = ?" for columna in cambios)
+    asignaciones = _clausula_set(cambios)
     conn.execute(f"UPDATE tickets SET {asignaciones} WHERE id = ?", [*cambios.values(), ticket_id])
     auditoria.registrar(
         conn,
@@ -182,6 +182,29 @@ def obtener_ticket(conn: sqlite3.Connection, ticket_id: int) -> TicketSalida:
     if row is None:
         raise TicketNoEncontradoError(ticket_id)
     return _a_salida(row)
+
+
+COLUMNAS_ACTUALIZABLES = frozenset(
+    {
+        "categoria",
+        "prioridad",
+        "estado",
+        "asignado_a",
+        "resumen_ia",
+        "corregido_por_persona",
+        "fecha_limite",
+        "resuelto_en",
+        "actualizado_en",
+    }
+)
+
+
+def _clausula_set(valores: dict[str, object]) -> str:
+    """`col = ?, ...` para un UPDATE; los nombres de columna solo pueden ser los conocidos."""
+    desconocidas = set(valores) - COLUMNAS_ACTUALIZABLES
+    if desconocidas:
+        raise ValueError(f"Columnas no actualizables: {sorted(desconocidas)}")
+    return ", ".join(f"{columna} = ?" for columna in valores)
 
 
 def _escapar_like(texto: str) -> str:
@@ -385,7 +408,7 @@ def actualizar_ticket(
             actual["creado_en"], valores["prioridad"]
         )
 
-    asignaciones = ", ".join(f"{columna} = ?" for columna in valores)
+    asignaciones = _clausula_set(valores)
     conn.execute(f"UPDATE tickets SET {asignaciones} WHERE id = ?", [*valores.values(), ticket_id])
     for campo, accion in ACCION_POR_CAMPO.items():
         if campo not in cambios or cambios[campo] == actual[campo]:

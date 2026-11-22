@@ -4,6 +4,7 @@
 <header class="barra">
   <span class="marca">TriageBot <span>Pro</span></span>
   <form method="post" action="/logout" class="barra-usuario">
+    {{ csrf_campo() }}
     <a href="/bandeja">Bandeja</a>
     <a href="/admin">Administración</a>
     <a href="/mi-cuenta">{{ usuario.nombre }}</a>

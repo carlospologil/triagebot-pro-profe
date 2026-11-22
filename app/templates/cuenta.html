@@ -4,6 +4,7 @@
 <header class="barra">
   <span class="marca">TriageBot <span>Pro</span></span>
   <form method="post" action="/logout" class="barra-usuario">
+    {{ csrf_campo() }}
     {% if not usuario.debe_cambiar_password %}
     <a href="/bandeja">Bandeja</a>
     {% if usuario.rol == "admin" %}<a href="/admin">Administración</a>{% endif %}
@@ -24,6 +25,7 @@
   {% if aviso %}<p class="alerta alerta-ok" role="status">{{ aviso }}</p>{% endif %}
   {% if error %}<p class="alerta alerta-error" role="alert">{{ error }}</p>{% endif %}
   <form method="post" action="/mi-cuenta/password" class="formulario formulario-ancho">
+    {{ csrf_campo() }}
     <label for="actual">Contraseña actual</label>
     <input id="actual" name="actual" type="password" autocomplete="current-password" required>
     <label for="nueva">Nueva contraseña</label>

@@ -10,6 +10,7 @@ from app.services.formato import ETIQUETAS_CATEGORIA, ETIQUETAS_ESTADO, ETIQUETA
 
 DIAS_VENTANA = 7
 FORMATO_ISO = "%Y-%m-%dT%H:%M:%SZ"
+COLUMNAS_AGRUPABLES = frozenset({"estado", "categoria", "prioridad"})
 
 
 @dataclass(frozen=True)
@@ -33,6 +34,8 @@ class Metricas:
 
 def _contar_por(conn: sqlite3.Connection, columna: str, claves: dict[str, str]) -> dict[str, int]:
     """Cuenta tickets por `columna` con todas las claves conocidas (a 0 si no hay ninguno)."""
+    if columna not in COLUMNAS_AGRUPABLES:
+        raise ValueError(f"Columna no agrupable: {columna}")
     conteo = dict.fromkeys(claves, 0)
     filas = conn.execute(f"SELECT {columna} AS clave, COUNT(*) AS n FROM tickets GROUP BY 1")
     for fila in filas:

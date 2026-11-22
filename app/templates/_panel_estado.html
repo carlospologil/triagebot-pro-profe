@@ -4,6 +4,7 @@
   {% if errores.estado %}<p class="alerta alerta-error" role="alert">{{ errores.estado }}</p>{% endif %}
   <form method="post" action="/tickets/{{ t.id }}/estado" class="form-panel"
         hx-post="/tickets/{{ t.id }}/estado" hx-target="#panel-estado" hx-swap="outerHTML">
+    {{ csrf_campo() }}
     <label for="estado">Cambiar a</label>
     <select id="estado" name="estado">
       {% for e in siguientes %}<option value="{{ e }}">{{ etiquetas_estado.get(e, e) }}</option>{% endfor %}

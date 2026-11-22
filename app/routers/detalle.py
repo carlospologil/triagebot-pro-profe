@@ -51,6 +51,7 @@ def _contexto(request: Request, conn: sqlite3.Connection, ticket, errores: dict[
     agentes = listar_usuarios_activos(conn)
     asignado = get_user(conn, ticket.asignado_a) if ticket.asignado_a else None
     return {
+        "request": request,
         "usuario": request.state.usuario,
         "t": ticket,
         "errores": errores,

@@ -4,6 +4,7 @@
 <header class="barra">
   <span class="marca">TriageBot <span>Pro</span></span>
   <form method="post" action="/logout" class="barra-usuario">
+    {{ csrf_campo() }}
     <a href="/bandeja">Bandeja</a>
     {% if usuario.rol == "admin" %}<a href="/admin">Administración</a>{% endif %}
     <a href="/mi-cuenta">{{ usuario.nombre }}</a>

@@ -4,6 +4,7 @@
   {% if errores.asignacion %}<p class="alerta alerta-error" role="alert">{{ errores.asignacion }}</p>{% endif %}
   <form method="post" action="/tickets/{{ t.id }}/asignacion" class="form-panel"
         hx-post="/tickets/{{ t.id }}/asignacion" hx-target="#panel-asignacion" hx-swap="outerHTML">
+    {{ csrf_campo() }}
     <label for="asignado_a">Asignar a</label>
     <select id="asignado_a" name="asignado_a">
       <option value=""{% if not t.asignado_a %} selected{% endif %}>Sin asignar</option>
@@ -17,6 +18,7 @@
   {% if t.asignado_a != usuario.id %}
   <form method="post" action="/tickets/{{ t.id }}/asignacion" class="form-panel"
         hx-post="/tickets/{{ t.id }}/asignacion" hx-target="#panel-asignacion" hx-swap="outerHTML">
+    {{ csrf_campo() }}
     <input type="hidden" name="asignado_a" value="{{ usuario.id }}">
     <button type="submit" class="boton boton-secundario">Asignarme</button>
   </form>

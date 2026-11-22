@@ -4,6 +4,7 @@
 <header class="barra">
   <span class="marca">TriageBot <span>Pro</span></span>
   <form method="post" action="/logout" class="barra-usuario">
+    {{ csrf_campo() }}
     <a href="/bandeja">Bandeja</a>
     <a href="/admin">Administración</a>
     <a href="/mi-cuenta">{{ usuario.nombre }}</a>
@@ -23,6 +24,7 @@
   {% if error %}<p class="alerta alerta-error" role="alert">{{ error }}</p>{% endif %}
 
   <form class="filtros" method="post" action="/admin/usuarios">
+    {{ csrf_campo() }}
     <div class="filtro">
       <label for="nuevo-nombre">Nombre</label>
       <input id="nuevo-nombre" name="nombre" type="text" value="{{ formulario.nombre }}" required>
@@ -66,6 +68,7 @@
           <td>{{ u.email }}</td>
           <td>
             <form method="post" action="/admin/usuarios/{{ u.id }}/rol" class="form-en-linea">
+              {{ csrf_campo() }}
               <select name="rol" aria-label="Rol de {{ u.email }}">
                 {% for r in roles %}
                 <option value="{{ r }}"{% if u.rol == r %} selected{% endif %}>{{ "Administrador" if r == "admin" else "Agente" }}</option>
@@ -82,16 +85,19 @@
           <td>
             <div class="acciones-fila">
               <form method="post" action="/admin/usuarios/{{ u.id }}/restablecer" class="form-en-linea">
+                {{ csrf_campo() }}
                 <button type="submit" class="boton boton-secundario boton-pequeno">Restablecer contraseña</button>
               </form>
               {% if u.activo %}
               {% if u.id != usuario.id %}
               <form method="post" action="/admin/usuarios/{{ u.id }}/desactivar" class="form-en-linea">
+                {{ csrf_campo() }}
                 <button type="submit" class="boton boton-secundario boton-pequeno">Desactivar</button>
               </form>
               {% endif %}
               {% else %}
               <form method="post" action="/admin/usuarios/{{ u.id }}/reactivar" class="form-en-linea">
+                {{ csrf_campo() }}
                 <button type="submit" class="boton boton-pequeno">Reactivar</button>
               </form>
               {% endif %}

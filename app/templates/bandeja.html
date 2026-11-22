@@ -60,6 +60,10 @@
       <input id="mios" name="mios" type="checkbox" value="1"{% if filtros.mios %} checked{% endif %}>
       <label for="mios">Solo míos</label>
     </div>
+    <div class="filtro filtro-casilla">
+      <input id="vencidos" name="vencidos" type="checkbox" value="1"{% if filtros.vencidos %} checked{% endif %}>
+      <label for="vencidos">Solo vencidos</label>
+    </div>
     <noscript><button type="submit" class="boton">Filtrar</button></noscript>
   </form>
   <div id="tabla-tickets" aria-live="polite">

@@ -165,6 +165,11 @@ body {
 .boton-desactivado { opacity: 0.45; cursor: default; pointer-events: none; }
 
 .etiqueta-corregido { background: #fff0d9; color: #8a4b00; }
+.etiqueta-vencido { background: var(--color-error); color: #fff; }
+
+.plazo-celda { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; margin-top: 0.3rem; }
+.plazo { font-size: 0.8rem; color: var(--color-suave); }
+.plazo-vencido { color: var(--color-error); font-weight: 600; }
 
 .migas { margin: 0 0 0.5rem; font-size: 0.9rem; }
 .migas a { color: var(--color-primario); text-decoration: none; }

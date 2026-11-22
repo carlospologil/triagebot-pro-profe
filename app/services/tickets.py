@@ -8,7 +8,7 @@ from typing import Any
 
 from app.clock import Clock, system_clock, to_iso
 from app.schemas import ESTADOS_FINALES, TRANSICIONES, PaginaTickets, TicketCrear, TicketSalida
-from app.services import clasificador
+from app.services import clasificador, sla
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +28,7 @@ class FilaBandeja:
     asignado_a: int | None
     asignado_nombre: str | None
     creado_en: str
+    fecha_limite: str | None = None
 
 
 @dataclass(frozen=True)
@@ -86,12 +87,14 @@ def crear_ticket(
     ahora = to_iso(clock())
     cursor = conn.execute(
         "INSERT INTO tickets (asunto, descripcion, solicitante_nombre, solicitante_email, "
-        "estado, prioridad, creado_en, actualizado_en) VALUES (?, ?, ?, ?, 'nuevo', 'media', ?, ?)",
+        "estado, prioridad, fecha_limite, creado_en, actualizado_en) "
+        "VALUES (?, ?, ?, ?, 'nuevo', 'media', ?, ?, ?)",
         (
             datos.asunto,
             datos.texto,
             datos.nombre_cliente or datos.email_cliente,
             datos.email_cliente,
+            sla.calcular_fecha_limite(ahora, "media"),
             ahora,
             ahora,
         ),
@@ -128,6 +131,7 @@ def clasificar_ticket(
             "prioridad": resultado.prioridad,
             "resumen_ia": resultado.justificacion,
             "corregido_por_persona": 0,
+            "fecha_limite": sla.calcular_fecha_limite(ticket.creado_en, resultado.prioridad),
         }
     cambios["actualizado_en"] = to_iso(clock())
     asignaciones = ", ".join(f"{columna} = ?" for columna in cambios)
@@ -155,6 +159,7 @@ def _construir_where(
     asignado_a: int | str | None,
     q: str | None,
     columnas_busqueda: tuple[str, ...],
+    vencidos_a: str | None = None,
 ) -> tuple[str, list[object]]:
     condiciones: list[str] = []
     parametros: list[object] = []
@@ -171,6 +176,10 @@ def _construir_where(
     elif asignado_a is not None:
         condiciones.append("asignado_a = ?")
         parametros.append(asignado_a)
+    if vencidos_a is not None:
+        marcas = ", ".join("?" * len(ESTADOS_FINALES))
+        condiciones.append(f"estado NOT IN ({marcas}) AND fecha_limite < ?")
+        parametros.extend([*ESTADOS_FINALES, vencidos_a])
     q = (q or "").strip()
     if q:
         patron = f"%{_escapar_like(q)}%"
@@ -192,11 +201,14 @@ def listar_bandeja(
     prioridad: str | None = None,
     asignado_a: int | str | None = None,
     q: str | None = None,
+    solo_vencidos: bool = False,
+    clock: Clock = system_clock,
 ) -> PaginaBandeja:
     """Página de tickets para la bandeja, con el nombre del asignado.
 
     `asignado_a` admite un id de usuario o `SIN_ASIGNAR`. La búsqueda también mira los datos
-    del cliente. Una página fuera de rango se ajusta a la última.
+    del cliente. `solo_vencidos` deja los tickets sin resolver ni cerrar cuya fecha límite ya
+    pasó según `clock`. Una página fuera de rango se ajusta a la última.
     """
     where, parametros = _construir_where(
         estado=estado,
@@ -205,6 +217,7 @@ def listar_bandeja(
         asignado_a=asignado_a,
         q=q,
         columnas_busqueda=("asunto", "descripcion", "solicitante_nombre", "solicitante_email"),
+        vencidos_a=to_iso(clock()) if solo_vencidos else None,
     )
     desde = "FROM tickets LEFT JOIN usuarios ON usuarios.id = tickets.asignado_a"
     total = conn.execute(f"SELECT COUNT(*) {desde}{where}", parametros).fetchone()[0]
@@ -213,6 +226,7 @@ def listar_bandeja(
     filas = conn.execute(
         "SELECT tickets.id, tickets.asunto, tickets.solicitante_nombre, tickets.categoria, "
         "tickets.prioridad, tickets.estado, tickets.asignado_a, tickets.creado_en, "
+        "tickets.fecha_limite, "
         f"usuarios.nombre AS asignado_nombre {desde}{where} "
         "ORDER BY tickets.creado_en DESC, tickets.id DESC LIMIT ? OFFSET ?",
         [*parametros, page_size, (page - 1) * page_size],
@@ -294,6 +308,10 @@ def actualizar_ticket(
             valores["resuelto_en"] = None
     if any(c in valores and valores[c] != actual[c] for c in ("categoria", "prioridad")):
         valores["corregido_por_persona"] = 1
+    if "prioridad" in valores:
+        valores["fecha_limite"] = sla.calcular_fecha_limite(
+            actual["creado_en"], valores["prioridad"]
+        )
 
     asignaciones = ", ".join(f"{columna} = ?" for columna in valores)
     conn.execute(f"UPDATE tickets SET {asignaciones} WHERE id = ?", [*valores.values(), ticket_id])

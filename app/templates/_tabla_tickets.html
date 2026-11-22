@@ -23,7 +23,16 @@
         <td>{{ t.solicitante_nombre }}</td>
         <td>{{ etiquetas_categoria.get(t.categoria, "Sin clasificar") }}</td>
         <td><span class="etiqueta etiqueta-prioridad-{{ t.prioridad }}">{{ etiquetas_prioridad.get(t.prioridad, t.prioridad) }}</span></td>
-        <td><span class="etiqueta etiqueta-estado-{{ t.estado }}">{{ etiquetas_estado.get(t.estado, t.estado) }}</span></td>
+        {% set p = plazo(t) %}
+        <td>
+          <span class="etiqueta etiqueta-estado-{{ t.estado }}">{{ etiquetas_estado.get(t.estado, t.estado) }}</span>
+          {% if p %}
+          <div class="plazo-celda">
+            {% if p.vencido %}<span class="etiqueta etiqueta-vencido">Vencido</span>{% endif %}
+            <span class="plazo{% if p.vencido %} plazo-vencido{% endif %}">{{ p.texto }}</span>
+          </div>
+          {% endif %}
+        </td>
         <td>{% if t.asignado_nombre %}{{ t.asignado_nombre }}{% else %}<span class="tenue">Sin asignar</span>{% endif %}</td>
         <td class="col-antiguedad">{{ antiguedad(t.creado_en) }}</td>
       </tr>

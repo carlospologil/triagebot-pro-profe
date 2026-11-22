@@ -12,9 +12,10 @@ from starlette.responses import Response
 
 from app.clock import Clock, system_clock
 from app.config import Settings, load_settings
-from app.db import init_db
+from app.db import connect, init_db
 from app.middleware import exigir_sesion
 from app.routers import admin, bandeja, detalle, health, sesion, tickets
+from app.services import sla
 from app.templating import templates
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -22,7 +23,13 @@ BASE_DIR = Path(__file__).resolve().parent
 
 @asynccontextmanager
 async def lifespan(application: FastAPI) -> AsyncIterator[None]:
-    init_db(application.state.settings.database_path)
+    ruta = application.state.settings.database_path
+    init_db(ruta)
+    conn = connect(ruta)
+    try:
+        sla.rellenar_fechas_limite(conn)
+    finally:
+        conn.close()
     yield
 
 

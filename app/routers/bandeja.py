@@ -13,6 +13,7 @@ from app.services.formato import (
     ETIQUETAS_PRIORIDAD,
     antiguedad,
 )
+from app.services.sla import calcular_plazo
 from app.services.tickets import SIN_ASIGNAR, listar_bandeja
 from app.services.usuarios import listar_usuarios_activos
 from app.templating import templates
@@ -54,6 +55,7 @@ def bandeja(
     prioridad: Annotated[str, Query()] = "",
     asignado_a: Annotated[str, Query()] = "",
     mios: Annotated[str, Query()] = "",
+    vencidos: Annotated[str, Query()] = "",
     q: Annotated[str, Query()] = "",
     page: Annotated[str, Query()] = "1",
 ):
@@ -67,6 +69,7 @@ def bandeja(
     categoria_f = _opcion(categoria, tuple(ETIQUETAS_CATEGORIA))
     prioridad_f = _opcion(prioridad, tuple(ETIQUETAS_PRIORIDAD))
     solo_mios = mios == "1"
+    solo_vencidos = vencidos == "1"
     asignado_f: int | str | None
     if solo_mios:
         asignado_f = usuario.id
@@ -84,6 +87,8 @@ def bandeja(
         prioridad=prioridad_f,
         asignado_a=asignado_f,
         q=q,
+        solo_vencidos=solo_vencidos,
+        clock=reloj,
     )
 
     filtros = {
@@ -92,6 +97,7 @@ def bandeja(
         "prioridad": prioridad_f or "",
         "asignado_a": "" if solo_mios or asignado_f is None else str(asignado_f),
         "mios": "1" if solo_mios else "",
+        "vencidos": "1" if solo_vencidos else "",
         "q": q,
     }
 
@@ -107,6 +113,7 @@ def bandeja(
         "filtros": filtros,
         "url_pagina": url_pagina,
         "antiguedad": lambda iso: antiguedad(iso, ahora),
+        "plazo": lambda t: calcular_plazo(t.fecha_limite, t.estado, ahora),
         "etiquetas_estado": ETIQUETAS_ESTADO,
         "etiquetas_prioridad": ETIQUETAS_PRIORIDAD,
         "etiquetas_categoria": ETIQUETAS_CATEGORIA,

@@ -19,6 +19,7 @@ from app.services.formato import (
     ETIQUETAS_PRIORIDAD,
     formatear_fecha,
 )
+from app.services.sla import calcular_plazo
 from app.services.usuarios import get_user, listar_usuarios_activos
 from app.templating import templates
 
@@ -59,6 +60,7 @@ def _contexto(request: Request, conn: sqlite3.Connection, ticket, errores: dict[
         "etiquetas_prioridad": ETIQUETAS_PRIORIDAD,
         "etiquetas_categoria": ETIQUETAS_CATEGORIA,
         "fecha": formatear_fecha,
+        "plazo": calcular_plazo(ticket.fecha_limite, ticket.estado, get_clock(request)()),
         "oob": False,
     }
 

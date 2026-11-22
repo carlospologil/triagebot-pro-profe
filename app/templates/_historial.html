@@ -2,7 +2,16 @@
   <h2>Línea de tiempo</h2>
   {% if historial %}
   <ol class="linea-tiempo">
-    {% for r in historial %}
+    {% for e in historial %}
+    {% if e.tipo == "comentario" %}
+    {% set c = e.comentario %}
+    <li class="entrada-comentario" id="comentario-{{ c.id }}">
+      <p class="evento-titulo">Comentario interno</p>
+      <p class="comentario-cuerpo">{{ c.cuerpo }}</p>
+      <p class="evento-meta tenue">{{ c.autor_nombre or "Usuario eliminado" }} · {{ fecha(c.creado_en) }}</p>
+    </li>
+    {% else %}
+    {% set r = e.registro %}
     <li>
       <p class="evento-titulo">{{ etiquetas_accion.get(r.accion, r.accion) }}</p>
       {% if r.valor_anterior is not none or r.valor_nuevo is not none %}
@@ -12,6 +21,7 @@
       {% endif %}
       <p class="evento-meta tenue">{{ r.usuario_email or "Sistema" }} · {{ fecha(r.creado_en) }}</p>
     </li>
+    {% endif %}
     {% endfor %}
   </ol>
   {% else %}

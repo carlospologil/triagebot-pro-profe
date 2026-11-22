@@ -222,6 +222,26 @@ body {
 .evento-titulo { font-weight: 600; }
 .evento-cambio { overflow-wrap: anywhere; }
 .evento-meta { font-size: 0.8rem; }
+.linea-tiempo .entrada-comentario::before { background: #14633a; }
+.linea-tiempo .comentario-cuerpo {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  margin: 0.25rem 0;
+  padding: 0.6rem 0.8rem;
+  background: #fafbfe;
+  border: 1px solid var(--color-borde);
+  border-radius: 8px;
+}
+.form-panel textarea {
+  padding: 0.5rem 0.65rem;
+  border: 1px solid var(--color-borde);
+  border-radius: 8px;
+  font: inherit;
+  resize: vertical;
+}
+.form-panel textarea:focus { outline: 2px solid var(--color-primario); outline-offset: 1px; }
+.form-panel textarea[aria-invalid="true"] { border-color: var(--color-error); }
+.error-campo { margin: 0; font-size: 0.85rem; color: var(--color-error); }
 
 .filtro input[type="date"], .filtro input[type="text"] {
   padding: 0.5rem 0.65rem;

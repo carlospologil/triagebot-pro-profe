@@ -1,0 +1,11 @@
+<section id="panel-comentarios" class="tarjeta panel" aria-label="Añadir comentario interno">
+  <h2>Nuevo comentario interno</h2>
+  <form method="post" action="/tickets/{{ t.id }}/comentarios" class="form-panel"
+        hx-post="/tickets/{{ t.id }}/comentarios" hx-target="#panel-comentarios" hx-swap="outerHTML">
+    {{ csrf_campo() }}
+    <label for="cuerpo">Nota para el equipo (no la ve el cliente)</label>
+    <textarea id="cuerpo" name="cuerpo" rows="4"{% if errores.comentarios %} aria-invalid="true" aria-describedby="error-cuerpo"{% endif %}>{{ borrador }}</textarea>
+    {% if errores.comentarios %}<p id="error-cuerpo" class="error-campo" role="alert">{{ errores.comentarios }}</p>{% endif %}
+    <button type="submit" class="boton">Añadir comentario</button>
+  </form>
+</section>

@@ -12,7 +12,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
 from app.clock import Clock, get_clock
 from app.db import get_db
-from app.services import auditoria
+from app.services import auditoria, comentarios
 from app.services import tickets as servicio
 from app.services.formato import (
     ETIQUETAS_CATEGORIA,
@@ -47,7 +47,13 @@ def _cargar(conn: sqlite3.Connection, ticket_id: int):
         raise HTTPException(status_code=404, detail="Ticket no encontrado") from None
 
 
-def _contexto(request: Request, conn: sqlite3.Connection, ticket, errores: dict[str, str]):
+def _contexto(
+    request: Request,
+    conn: sqlite3.Connection,
+    ticket,
+    errores: dict[str, str],
+    borrador: str = "",
+):
     agentes = listar_usuarios_activos(conn)
     asignado = get_user(conn, ticket.asignado_a) if ticket.asignado_a else None
     return {
@@ -63,7 +69,9 @@ def _contexto(request: Request, conn: sqlite3.Connection, ticket, errores: dict[
         "etiquetas_prioridad": ETIQUETAS_PRIORIDAD,
         "etiquetas_categoria": ETIQUETAS_CATEGORIA,
         "fecha": formatear_fecha,
-        "historial": auditoria.linea_de_tiempo(conn, ticket.id),
+        "historial": comentarios.linea_de_tiempo(conn, ticket.id),
+        "borrador": borrador,
+        "max_comentario": comentarios.MAX_CARACTERES,
         "etiquetas_accion": auditoria.ETIQUETAS_ACCION,
         "valor_auditoria": valor_auditoria,
         "plazo": calcular_plazo(ticket.fecha_limite, ticket.estado, get_clock(request)()),
@@ -71,22 +79,37 @@ def _contexto(request: Request, conn: sqlite3.Connection, ticket, errores: dict[
     }
 
 
-def _pagina(request: Request, conn, ticket_id: int, errores: dict[str, str], status: int):
-    contexto = _contexto(request, conn, _cargar(conn, ticket_id), errores)
+def _pagina(
+    request: Request,
+    conn,
+    ticket_id: int,
+    errores: dict[str, str],
+    status: int,
+    borrador: str = "",
+):
+    contexto = _contexto(request, conn, _cargar(conn, ticket_id), errores, borrador)
     respuesta = templates.TemplateResponse(request, "ticket.html", contexto, status_code=status)
     respuesta.headers["Vary"] = "HX-Request"
     return respuesta
 
 
 def _resultado(
-    request: Request, conn, ticket_id: int, panel: str, error: str | None = None, status: int = 409
+    request: Request,
+    conn,
+    ticket_id: int,
+    panel: str,
+    error: str | None = None,
+    status: int = 409,
+    borrador: str = "",
 ) -> Response:
     """Respuesta de una acción: fragmento HTMX, redirección o página completa con el error."""
     if not _es_htmx(request):
         if error is None:
             return RedirectResponse(f"/tickets/{ticket_id}", status_code=303)
-        return _pagina(request, conn, ticket_id, {panel: error}, status)
-    contexto = _contexto(request, conn, _cargar(conn, ticket_id), {panel: error} if error else {})
+        return _pagina(request, conn, ticket_id, {panel: error}, status, borrador)
+    contexto = _contexto(
+        request, conn, _cargar(conn, ticket_id), {panel: error} if error else {}, borrador
+    )
     html = templates.get_template(f"_panel_{panel}.html").render(contexto)
     html += templates.get_template("_fechas.html").render({**contexto, "oob": True})
     html += templates.get_template("_historial.html").render({**contexto, "oob": True})
@@ -176,3 +199,27 @@ def corregir_clasificacion(
         )
     servicio.actualizar_ticket(conn, ticket_id, cambios, reloj, usuario_id=request.state.usuario.id)
     return _resultado(request, conn, ticket_id, "clasificacion")
+
+
+@router.post("/{ticket_id}/comentarios", response_class=HTMLResponse)
+def comentar(
+    ticket_id: int,
+    request: Request,
+    conn: Db,
+    reloj: RelojDep,
+    cuerpo: Annotated[str, Form()] = "",
+):
+    _cargar(conn, ticket_id)
+    try:
+        comentarios.crear_comentario(conn, ticket_id, request.state.usuario.id, cuerpo, reloj)
+    except comentarios.ComentarioInvalidoError as exc:
+        return _resultado(
+            request,
+            conn,
+            ticket_id,
+            "comentarios",
+            str(exc),
+            422,
+            borrador=comentarios.normalizar(cuerpo),
+        )
+    return _resultado(request, conn, ticket_id, "comentarios")

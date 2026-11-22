@@ -259,3 +259,29 @@ a.boton { display: inline-block; text-decoration: none; }
 .grafico-barra { fill: var(--color-primario); }
 .grafico-etiqueta, .grafico-valor { font-size: 13px; fill: var(--color-texto); }
 .grafico-valor { font-weight: 700; }
+
+.alerta-ok { background: #e8f6ee; color: #14633a; }
+.alerta-aviso { background: #fff6e0; color: #6b4a00; }
+.password-temporal {
+  display: inline-block;
+  padding: 0.4rem 0.75rem;
+  background: #fff;
+  border: 1px solid var(--color-borde);
+  border-radius: 8px;
+  font-size: 1.1rem;
+  user-select: all;
+}
+.contenido-estrecho { max-width: 34rem; }
+.formulario-ancho { margin-top: 0.75rem; }
+.ayuda { font-size: 0.8rem; color: var(--color-suave); }
+.form-en-linea { display: flex; gap: 0.4rem; align-items: center; margin: 0; }
+.form-en-linea select {
+  padding: 0.3rem 0.5rem;
+  border: 1px solid var(--color-borde);
+  border-radius: 8px;
+  font: inherit;
+  background: #fff;
+}
+.boton-pequeno { padding: 0.3rem 0.7rem; font-size: 0.85rem; }
+.acciones-fila { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.fila-inactiva { color: var(--color-suave); background: #f8f9fc; }

@@ -6,13 +6,16 @@
   <form method="post" action="/logout" class="barra-usuario">
     <a href="/bandeja">Bandeja</a>
     <a href="/panel">Panel</a>
-    <span>{{ usuario.nombre }}</span>
+    <a href="/mi-cuenta">{{ usuario.nombre }}</a>
     <button type="submit" class="boton boton-secundario">Cerrar sesión</button>
   </form>
 </header>
 <main class="contenido">
   <h1>Administración</h1>
-  <p>Desde aquí se gestionarán los usuarios y se consultará la auditoría.</p>
-  <p><a class="boton" href="/admin/auditoria">Ver auditoría</a></p>
+  <p>Gestiona el equipo y consulta la auditoría.</p>
+  <p>
+    <a class="boton" href="/admin/usuarios">Gestionar usuarios</a>
+    <a class="boton boton-secundario" href="/admin/auditoria">Ver auditoría</a>
+  </p>
 </main>
 {% endblock %}

@@ -2,12 +2,15 @@ import sqlite3
 from typing import Annotated
 from urllib.parse import urlencode
 
-from fastapi import APIRouter, Depends, Query, Request
-from fastapi.responses import HTMLResponse
+from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request
+from fastapi.responses import HTMLResponse, RedirectResponse
 
+from app.auth import PasswordTooShortError
+from app.clock import Clock, get_clock
 from app.db import get_db
 from app.permisos import require_role
 from app.services import auditoria
+from app.services import usuarios as servicio
 from app.services.formato import formatear_fecha, valor_auditoria
 from app.services.usuarios import Usuario
 from app.templating import templates
@@ -18,11 +21,140 @@ solo_admin = require_role("admin")
 router = APIRouter(prefix="/admin", dependencies=[Depends(solo_admin)])
 
 Db = Annotated[sqlite3.Connection, Depends(get_db)]
+Reloj = Annotated[Clock, Depends(get_clock)]
+Admin = Annotated[Usuario, Depends(solo_admin)]
+
+USUARIOS_URL = "/admin/usuarios"
+CLAVE_AVISO = "aviso_usuarios"
 
 
 @router.get("", response_class=HTMLResponse)
 def panel(request: Request, usuario: Annotated[Usuario, Depends(solo_admin)]):
     return templates.TemplateResponse(request, "admin.html", {"usuario": usuario})
+
+
+def _pagina_usuarios(
+    request: Request,
+    conn: sqlite3.Connection,
+    usuario: Usuario,
+    *,
+    error: str | None = None,
+    status: int = 200,
+    temporal: tuple[str, str] | None = None,
+    formulario: dict[str, str] | None = None,
+):
+    """Lista de usuarios. `temporal` es (email, contraseña) y solo se muestra en esta respuesta."""
+    contexto = {
+        "usuario": usuario,
+        "usuarios": servicio.listar_usuarios(conn),
+        "roles": servicio.ROLES,
+        "error": error,
+        "aviso": request.session.pop(CLAVE_AVISO, None),
+        "temporal": temporal,
+        "formulario": formulario or {"email": "", "nombre": "", "rol": "agente"},
+        "fecha": formatear_fecha,
+    }
+    respuesta = templates.TemplateResponse(request, "usuarios.html", contexto, status_code=status)
+    if temporal:
+        respuesta.headers["Cache-Control"] = "no-store"
+    return respuesta
+
+
+def _fallo(request: Request, conn: sqlite3.Connection, usuario: Usuario, exc: ValueError):
+    if isinstance(exc, servicio.UsuarioNoEncontradoError):
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    status = 409 if isinstance(exc, servicio.ProteccionError) else 422
+    return _pagina_usuarios(request, conn, usuario, error=str(exc), status=status)
+
+
+def _hecho(request: Request, aviso: str) -> RedirectResponse:
+    request.session[CLAVE_AVISO] = aviso
+    return RedirectResponse(USUARIOS_URL, status_code=303)
+
+
+@router.get("/usuarios", response_class=HTMLResponse)
+def listar_usuarios(request: Request, conn: Db, usuario: Admin):
+    return _pagina_usuarios(request, conn, usuario)
+
+
+@router.post("/usuarios", response_class=HTMLResponse)
+def crear_usuario(
+    request: Request,
+    conn: Db,
+    usuario: Admin,
+    reloj: Reloj,
+    email: Annotated[str, Form()] = "",
+    nombre: Annotated[str, Form()] = "",
+    rol: Annotated[str, Form()] = "agente",
+    password: Annotated[str, Form()] = "",
+):
+    """Alta de usuario. Sin contraseña indicada se genera una temporal; siempre debe cambiarla."""
+    formulario = {"email": email, "nombre": nombre, "rol": rol}
+    inicial = password or servicio.generar_password_temporal()
+    try:
+        nuevo = servicio.create_user(
+            conn,
+            email=email,
+            nombre=nombre,
+            password=inicial,
+            rol=rol,
+            clock=reloj,
+            actor_id=usuario.id,
+            debe_cambiar_password=True,
+        )
+    except (servicio.UsuarioError, PasswordTooShortError) as exc:
+        status = 409 if isinstance(exc, servicio.EmailDuplicadoError) else 422
+        return _pagina_usuarios(
+            request, conn, usuario, error=str(exc), status=status, formulario=formulario
+        )
+    if password:
+        return _hecho(request, f"Usuario {nuevo.email} creado. Deberá cambiar la contraseña.")
+    return _pagina_usuarios(request, conn, usuario, temporal=(nuevo.email, inicial))
+
+
+@router.post("/usuarios/{user_id}/rol", response_class=HTMLResponse)
+def cambiar_rol(
+    request: Request,
+    user_id: int,
+    conn: Db,
+    usuario: Admin,
+    reloj: Reloj,
+    rol: Annotated[str, Form()] = "",
+):
+    try:
+        actualizado = servicio.cambiar_rol(conn, user_id, rol, actor_id=usuario.id, clock=reloj)
+    except servicio.UsuarioError as exc:
+        return _fallo(request, conn, usuario, exc)
+    return _hecho(request, f"Rol de {actualizado.email} actualizado.")
+
+
+@router.post("/usuarios/{user_id}/desactivar", response_class=HTMLResponse)
+def desactivar_usuario(request: Request, user_id: int, conn: Db, usuario: Admin, reloj: Reloj):
+    try:
+        actualizado = servicio.desactivar(conn, user_id, actor_id=usuario.id, clock=reloj)
+    except servicio.UsuarioError as exc:
+        return _fallo(request, conn, usuario, exc)
+    return _hecho(request, f"Usuario {actualizado.email} desactivado.")
+
+
+@router.post("/usuarios/{user_id}/reactivar", response_class=HTMLResponse)
+def reactivar_usuario(request: Request, user_id: int, conn: Db, usuario: Admin, reloj: Reloj):
+    try:
+        actualizado = servicio.reactivar(conn, user_id, actor_id=usuario.id, clock=reloj)
+    except servicio.UsuarioError as exc:
+        return _fallo(request, conn, usuario, exc)
+    return _hecho(request, f"Usuario {actualizado.email} reactivado.")
+
+
+@router.post("/usuarios/{user_id}/restablecer", response_class=HTMLResponse)
+def restablecer_password(request: Request, user_id: int, conn: Db, usuario: Admin, reloj: Reloj):
+    """Muestra la contraseña temporal en esta respuesta; no se guarda en ningún otro sitio."""
+    try:
+        temporal = servicio.restablecer_password(conn, user_id, actor_id=usuario.id, clock=reloj)
+    except servicio.UsuarioError as exc:
+        return _fallo(request, conn, usuario, exc)
+    destino = servicio.get_user(conn, user_id)
+    return _pagina_usuarios(request, conn, usuario, temporal=(destino.email, temporal))
 
 
 @router.get("/auditoria", response_class=HTMLResponse)

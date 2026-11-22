@@ -156,6 +156,14 @@ MIGRATIONS: tuple[Migration, ...] = (
             """,
         ),
     ),
+    Migration(
+        version=5,
+        name="cambio_de_contraseña_obligatorio",
+        statements=(
+            "ALTER TABLE usuarios ADD COLUMN debe_cambiar_password INTEGER NOT NULL DEFAULT 0 "
+            "CHECK (debe_cambiar_password IN (0, 1))",
+        ),
+    ),
 )
 
 

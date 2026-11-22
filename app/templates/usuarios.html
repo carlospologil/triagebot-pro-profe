@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% block titulo %}Usuarios · TriageBot Pro{% endblock %}
+{% block cuerpo %}
+<header class="barra">
+  <span class="marca">TriageBot <span>Pro</span></span>
+  <form method="post" action="/logout" class="barra-usuario">
+    <a href="/bandeja">Bandeja</a>
+    <a href="/admin">Administración</a>
+    <a href="/mi-cuenta">{{ usuario.nombre }}</a>
+    <button type="submit" class="boton boton-secundario">Cerrar sesión</button>
+  </form>
+</header>
+<main class="contenido">
+  <p class="migas"><a href="/admin">&larr; Administración</a></p>
+  <h1>Usuarios</h1>
+  {% if temporal %}
+  <section class="alerta alerta-aviso" role="alert">
+    <p>Contraseña temporal de <strong>{{ temporal[0] }}</strong>. Cópiala ahora: no se volverá a mostrar y deberá cambiarla al iniciar sesión.</p>
+    <p><code class="password-temporal">{{ temporal[1] }}</code></p>
+  </section>
+  {% endif %}
+  {% if aviso %}<p class="alerta alerta-ok" role="status">{{ aviso }}</p>{% endif %}
+  {% if error %}<p class="alerta alerta-error" role="alert">{{ error }}</p>{% endif %}
+
+  <form class="filtros" method="post" action="/admin/usuarios">
+    <div class="filtro">
+      <label for="nuevo-nombre">Nombre</label>
+      <input id="nuevo-nombre" name="nombre" type="text" value="{{ formulario.nombre }}" required>
+    </div>
+    <div class="filtro">
+      <label for="nuevo-email">Correo electrónico</label>
+      <input id="nuevo-email" name="email" type="email" value="{{ formulario.email }}" required>
+    </div>
+    <div class="filtro">
+      <label for="nuevo-rol">Rol</label>
+      <select id="nuevo-rol" name="rol">
+        {% for r in roles %}
+        <option value="{{ r }}"{% if formulario.rol == r %} selected{% endif %}>{{ "Administrador" if r == "admin" else "Agente" }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="filtro">
+      <label for="nuevo-password">Contraseña inicial (opcional)</label>
+      <input id="nuevo-password" name="password" type="password" autocomplete="new-password" placeholder="Se genera una temporal">
+    </div>
+    <button type="submit" class="boton">Crear usuario</button>
+  </form>
+
+  <p class="resumen-tabla">{{ usuarios|length }} usuario{{ "s" if usuarios|length != 1 }}</p>
+  <div class="tabla-envoltorio">
+    <table class="tabla-tickets">
+      <thead>
+        <tr>
+          <th>Nombre</th>
+          <th>Correo</th>
+          <th>Rol</th>
+          <th>Estado</th>
+          <th>Alta</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in usuarios %}
+        <tr{% if not u.activo %} class="fila-inactiva"{% endif %}>
+          <td>{{ u.nombre }}{% if u.id == usuario.id %} <span class="tenue">(tú)</span>{% endif %}</td>
+          <td>{{ u.email }}</td>
+          <td>
+            <form method="post" action="/admin/usuarios/{{ u.id }}/rol" class="form-en-linea">
+              <select name="rol" aria-label="Rol de {{ u.email }}">
+                {% for r in roles %}
+                <option value="{{ r }}"{% if u.rol == r %} selected{% endif %}>{{ "Administrador" if r == "admin" else "Agente" }}</option>
+                {% endfor %}
+              </select>
+              <button type="submit" class="boton boton-secundario boton-pequeno">Guardar</button>
+            </form>
+          </td>
+          <td>
+            {% if u.activo %}<span class="etiqueta">Activo</span>{% else %}<span class="etiqueta etiqueta-vencido">Inactivo</span>{% endif %}
+            {% if u.debe_cambiar_password %}<span class="etiqueta etiqueta-corregido">Contraseña temporal</span>{% endif %}
+          </td>
+          <td class="col-fecha">{{ fecha(u.creado_en) }}</td>
+          <td>
+            <div class="acciones-fila">
+              <form method="post" action="/admin/usuarios/{{ u.id }}/restablecer" class="form-en-linea">
+                <button type="submit" class="boton boton-secundario boton-pequeno">Restablecer contraseña</button>
+              </form>
+              {% if u.activo %}
+              {% if u.id != usuario.id %}
+              <form method="post" action="/admin/usuarios/{{ u.id }}/desactivar" class="form-en-linea">
+                <button type="submit" class="boton boton-secundario boton-pequeno">Desactivar</button>
+              </form>
+              {% endif %}
+              {% else %}
+              <form method="post" action="/admin/usuarios/{{ u.id }}/reactivar" class="form-en-linea">
+                <button type="submit" class="boton boton-pequeno">Reactivar</button>
+              </form>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</main>
+{% endblock %}

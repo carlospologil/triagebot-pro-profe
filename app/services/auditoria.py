@@ -19,6 +19,11 @@ ASIGNACION_CAMBIADA = "asignacion_cambiada"
 LOGIN_CORRECTO = "login_correcto"
 LOGIN_FALLIDO = "login_fallido"
 USUARIO_CREADO = "usuario_creado"
+USUARIO_ROL_CAMBIADO = "usuario_rol_cambiado"
+USUARIO_DESACTIVADO = "usuario_desactivado"
+USUARIO_REACTIVADO = "usuario_reactivado"
+PASSWORD_RESTABLECIDA = "password_restablecida"
+PASSWORD_CAMBIADA = "password_cambiada"
 
 ETIQUETAS_ACCION = {
     TICKET_CREADO: "Ticket creado",
@@ -31,6 +36,11 @@ ETIQUETAS_ACCION = {
     LOGIN_CORRECTO: "Inicio de sesión",
     LOGIN_FALLIDO: "Inicio de sesión fallido",
     USUARIO_CREADO: "Usuario creado",
+    USUARIO_ROL_CAMBIADO: "Cambio de rol de usuario",
+    USUARIO_DESACTIVADO: "Usuario desactivado",
+    USUARIO_REACTIVADO: "Usuario reactivado",
+    PASSWORD_RESTABLECIDA: "Contraseña restablecida",
+    PASSWORD_CAMBIADA: "Contraseña cambiada",
 }
 
 TAMANO_PAGINA = 50

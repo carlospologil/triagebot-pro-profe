@@ -12,6 +12,9 @@ from app.services.usuarios import Usuario
 
 SESSION_USER_KEY = "usuario_id"
 RUTAS_PUBLICAS = ("/login", "/health", "/static")
+CUENTA_URL = "/mi-cuenta"
+# Con una contraseña temporal solo se puede cambiarla o cerrar sesión.
+RUTAS_CAMBIO_PASSWORD = (CUENTA_URL, "/logout")
 
 
 def _es_ruta(path: str, prefijo: str) -> bool:
@@ -43,6 +46,13 @@ async def exigir_sesion(request: Request, call_next: RequestResponseEndpoint) ->
         if _es_ruta(path, "/api"):
             return JSONResponse({"detail": "No autenticado"}, status_code=401)
         return RedirectResponse("/login", status_code=303)
+
+    if usuario.debe_cambiar_password and not any(
+        _es_ruta(path, ruta) for ruta in RUTAS_CAMBIO_PASSWORD
+    ):
+        if _es_ruta(path, "/api"):
+            return JSONResponse({"detail": "Debes cambiar tu contraseña"}, status_code=403)
+        return RedirectResponse(CUENTA_URL, status_code=303)
 
     request.state.usuario = usuario
     return await call_next(request)

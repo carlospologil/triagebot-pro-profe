@@ -6,7 +6,7 @@
   <form method="post" action="/logout" class="barra-usuario">
     <a href="/panel">Panel</a>
     {% if usuario.rol == "admin" %}<a href="/admin">Administración</a>{% endif %}
-    <span>{{ usuario.nombre }}</span>
+    <a href="/mi-cuenta">{{ usuario.nombre }}</a>
     <button type="submit" class="boton boton-secundario">Cerrar sesión</button>
   </form>
 </header>

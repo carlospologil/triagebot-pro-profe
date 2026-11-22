@@ -491,7 +491,7 @@ def test_la_migracion_conserva_los_registros_anteriores(settings):
         "INSERT INTO auditoria (accion, detalle, creado_en) VALUES ('antigua', 'd', ?)", (AHORA,)
     )
     conn.commit()
-    assert migrate(conn, MIGRATIONS) == [4]
+    assert migrate(conn, MIGRATIONS[:4]) == [4]
     fila = conn.execute("SELECT * FROM auditoria").fetchone()
     assert (fila["accion"], fila["detalle"], fila["valor_nuevo"]) == ("antigua", "d", None)
     conn.close()

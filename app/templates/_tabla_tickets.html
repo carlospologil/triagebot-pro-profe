@@ -1,0 +1,68 @@
+<div class="cabecera-tabla">
+  <p class="resumen-tabla">
+    {% if pagina.total == 1 %}1 ticket{% else %}{{ pagina.total }} tickets{% endif %}
+    {% if hay_filtros %}con los filtros aplicados{% endif %}
+  </p>
+  <a id="exportar" class="boton boton-secundario" href="{{ url_exportar }}" download
+     title="Descarga en CSV (compatible con Excel) todos los tickets que cumplen los filtros">Exportar</a>
+</div>
+{% if pagina.items %}
+<div class="tabla-envoltorio">
+  <table class="tabla-tickets">
+    <thead>
+      <tr>
+        <th scope="col">Asunto</th>
+        <th scope="col">Cliente</th>
+        <th scope="col">Categoría</th>
+        <th scope="col">Prioridad</th>
+        <th scope="col">Estado</th>
+        <th scope="col">Asignado</th>
+        <th scope="col">Antigüedad</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for t in pagina.items %}
+      <tr>
+        <td class="col-asunto"><a href="/tickets/{{ t.id }}">{{ t.asunto }}</a></td>
+        <td>{{ t.solicitante_nombre }}</td>
+        <td>{{ etiquetas_categoria.get(t.categoria, "Sin clasificar") }}</td>
+        <td><span class="etiqueta etiqueta-prioridad-{{ t.prioridad }}">{{ etiquetas_prioridad.get(t.prioridad, t.prioridad) }}</span></td>
+        {% set p = plazo(t) %}
+        <td>
+          <span class="etiqueta etiqueta-estado-{{ t.estado }}">{{ etiquetas_estado.get(t.estado, t.estado) }}</span>
+          {% if p %}
+          <div class="plazo-celda">
+            {% if p.vencido %}<span class="etiqueta etiqueta-vencido">Vencido</span>{% endif %}
+            <span class="plazo{% if p.vencido %} plazo-vencido{% endif %}">{{ p.texto }}</span>
+          </div>
+          {% endif %}
+        </td>
+        <td>{% if t.asignado_nombre %}{{ t.asignado_nombre }}{% else %}<span class="tenue">Sin asignar</span>{% endif %}</td>
+        <td class="col-antiguedad">{{ antiguedad(t.creado_en) }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<p class="vacio">
+  {% if hay_filtros %}Ningún ticket coincide con los filtros.{% else %}Aún no hay tickets que mostrar.{% endif %}
+</p>
+{% endif %}
+{% if pagina.paginas > 1 %}
+<nav class="paginacion" aria-label="Paginación">
+  {% if pagina.page > 1 %}
+  <a class="boton boton-secundario" href="{{ url_pagina(pagina.page - 1) }}"
+     hx-get="{{ url_pagina(pagina.page - 1) }}" hx-target="#tabla-tickets" hx-push-url="true">Anterior</a>
+  {% else %}
+  <span class="boton boton-secundario boton-desactivado" aria-disabled="true">Anterior</span>
+  {% endif %}
+  <span>Página {{ pagina.page }} de {{ pagina.paginas }}</span>
+  {% if pagina.page < pagina.paginas %}
+  <a class="boton boton-secundario" href="{{ url_pagina(pagina.page + 1) }}"
+     hx-get="{{ url_pagina(pagina.page + 1) }}" hx-target="#tabla-tickets" hx-push-url="true">Siguiente</a>
+  {% else %}
+  <span class="boton boton-secundario boton-desactivado" aria-disabled="true">Siguiente</span>
+  {% endif %}
+</nav>
+{% endif %}

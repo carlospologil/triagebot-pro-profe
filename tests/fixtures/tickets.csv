@@ -1,0 +1,8 @@
+texto,asunto,email_cliente
+No puedo entrar a mi cuenta,Acceso bloqueado,ana@example.com
+"Me cobraron dos veces
+esta factura",Cobro duplicado,LUIS@example.com
+,Fila sin texto,vacio@example.com
+Solo tengo texto,,
+"=HYPERLINK(""http://ejemplo.invalid"")",Fórmula,formula@example.com
+Correo mal escrito,Email roto,no-es-un-email

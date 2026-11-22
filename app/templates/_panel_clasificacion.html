@@ -1,0 +1,32 @@
+<section id="panel-clasificacion" class="tarjeta panel">
+  <h2>Clasificación</h2>
+  <p class="etiquetas-fila">
+    <span class="etiqueta">{{ etiquetas_categoria.get(t.categoria, "Sin clasificar") }}</span>
+    <span class="etiqueta etiqueta-prioridad-{{ t.prioridad }}">{{ etiquetas_prioridad.get(t.prioridad, t.prioridad) }}</span>
+    {% if t.corregido_por_persona %}
+    <span class="etiqueta etiqueta-corregido">Corregido por una persona</span>
+    {% endif %}
+  </p>
+  <p class="justificacion">
+    {% if t.resumen_ia %}<strong>Justificación de la IA:</strong> {{ t.resumen_ia }}{% else %}<span class="tenue">Sin justificación de la IA.</span>{% endif %}
+  </p>
+  <form method="post" action="/tickets/{{ t.id }}/clasificacion" class="form-panel"
+        hx-post="/tickets/{{ t.id }}/clasificacion" hx-target="#panel-clasificacion" hx-swap="outerHTML">
+    {{ csrf_campo() }}
+    <label for="categoria">Categoría</label>
+    <select id="categoria" name="categoria">
+      {% if not t.categoria %}<option value="" selected disabled>Sin clasificar</option>{% endif %}
+      {% for clave, texto in etiquetas_categoria.items() %}
+      <option value="{{ clave }}"{% if t.categoria == clave %} selected{% endif %}>{{ texto }}</option>
+      {% endfor %}
+    </select>
+    <label for="prioridad">Prioridad</label>
+    <select id="prioridad" name="prioridad">
+      {% for clave, texto in etiquetas_prioridad.items() %}
+      <option value="{{ clave }}"{% if t.prioridad == clave %} selected{% endif %}>{{ texto }}</option>
+      {% endfor %}
+    </select>
+    {% if errores.clasificacion %}<p id="error-clasificacion" class="error-campo" role="alert">{{ errores.clasificacion }}</p>{% endif %}
+    <button type="submit" class="boton">Guardar corrección</button>
+  </form>
+</section>

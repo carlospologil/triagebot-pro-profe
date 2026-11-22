@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% from "_campos.html" import campo, selector %}
+{% block titulo %}Usuarios · TriageBot Pro{% endblock %}
+{% block cuerpo %}
+  <p class="migas"><a href="/admin">&larr; Administración</a></p>
+  <h1>Usuarios</h1>
+  {% if temporal %}
+  <section class="alerta alerta-aviso" role="alert">
+    <p>Contraseña temporal de <strong>{{ temporal[0] }}</strong>. Cópiala ahora: no se volverá a mostrar y deberá cambiarla al iniciar sesión.</p>
+    <p><code class="password-temporal">{{ temporal[1] }}</code></p>
+  </section>
+  {% endif %}
+
+  <form class="filtros formulario-alta" method="post" action="/admin/usuarios">
+    {{ csrf_campo() }}
+    {{ campo("nuevo-nombre", "nombre", "Nombre", errores, valor=formulario.nombre, atributos="required", clase="filtro") }}
+    {{ campo("nuevo-email", "email", "Correo electrónico", errores, tipo="email", valor=formulario.email, atributos="required", clase="filtro") }}
+    {{ selector("nuevo-rol", "rol", "Rol", opciones_rol, formulario.rol, errores, clase="filtro") }}
+    {{ campo("nuevo-password", "password", "Contraseña inicial (opcional)", errores, tipo="password", atributos='autocomplete="new-password" placeholder="Se genera una temporal"', clase="filtro") }}
+    <button type="submit" class="boton">Crear usuario</button>
+  </form>
+
+  <p class="resumen-tabla">{{ usuarios|length }} usuario{{ "s" if usuarios|length != 1 }}</p>
+  <div class="tabla-envoltorio">
+    <table class="tabla-tickets">
+      <thead>
+        <tr>
+          <th>Nombre</th>
+          <th>Correo</th>
+          <th>Rol</th>
+          <th>Estado</th>
+          <th>Alta</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in usuarios %}
+        <tr{% if not u.activo %} class="fila-inactiva"{% endif %}>
+          <td>{{ u.nombre }}{% if u.id == usuario.id %} <span class="tenue">(tú)</span>{% endif %}</td>
+          <td>{{ u.email }}</td>
+          <td>
+            <form method="post" action="/admin/usuarios/{{ u.id }}/rol" class="form-en-linea">
+              {{ csrf_campo() }}
+              <select name="rol" aria-label="Rol de {{ u.email }}">
+                {% for r in roles %}
+                <option value="{{ r }}"{% if u.rol == r %} selected{% endif %}>{{ "Administrador" if r == "admin" else "Agente" }}</option>
+                {% endfor %}
+              </select>
+              <button type="submit" class="boton boton-secundario boton-pequeno">Guardar</button>
+            </form>
+          </td>
+          <td>
+            {% if u.activo %}<span class="etiqueta">Activo</span>{% else %}<span class="etiqueta etiqueta-vencido">Inactivo</span>{% endif %}
+            {% if u.debe_cambiar_password %}<span class="etiqueta etiqueta-corregido">Contraseña temporal</span>{% endif %}
+          </td>
+          <td class="col-fecha">{{ fecha(u.creado_en) }}</td>
+          <td>
+            <div class="acciones-fila">
+              <form method="post" action="/admin/usuarios/{{ u.id }}/restablecer" class="form-en-linea">
+                {{ csrf_campo() }}
+                <button type="submit" class="boton boton-secundario boton-pequeno">Restablecer contraseña</button>
+              </form>
+              {% if u.activo %}
+              {% if u.id != usuario.id %}
+              <form method="post" action="/admin/usuarios/{{ u.id }}/desactivar" class="form-en-linea">
+                {{ csrf_campo() }}
+                <button type="submit" class="boton boton-secundario boton-pequeno">Desactivar</button>
+              </form>
+              {% endif %}
+              {% else %}
+              <form method="post" action="/admin/usuarios/{{ u.id }}/reactivar" class="form-en-linea">
+                {{ csrf_campo() }}
+                <button type="submit" class="boton boton-pequeno">Reactivar</button>
+              </form>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endblock %}

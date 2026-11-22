@@ -1,0 +1,4 @@
+id,asunto,texto,nombre_cliente,email_cliente,estado,prioridad,categoria,asignado_a,creado_en,actualizado_en,fecha_limite,resuelto_en
+2,Cobro duplicado,"Me cobraron dos veces
+esta factura",luis@example.com,luis@example.com,nuevo,media,sin_clasificar,,2026-03-02T09:00:00Z,2026-03-02T09:00:00Z,2026-03-03T09:00:00Z,
+1,Acceso bloqueado,No puedo entrar a mi cuenta,ana@example.com,ana@example.com,nuevo,media,sin_clasificar,,2026-03-02T09:00:00Z,2026-03-02T09:00:00Z,2026-03-03T09:00:00Z,

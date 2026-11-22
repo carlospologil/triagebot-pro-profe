@@ -1,0 +1,7 @@
+[
+  {"texto": "Mi pedido no llega", "asunto": "Pedido retrasado", "email_cliente": "eva@example.com"},
+  {"texto": "   "},
+  {"asunto": "Sin texto"},
+  "una cadena suelta",
+  {"texto": "Quiero cambiar mi plan"}
+]

@@ -3,6 +3,7 @@
 import logging
 import math
 import sqlite3
+from dataclasses import dataclass
 from typing import Any
 
 from app.clock import Clock, system_clock, to_iso
@@ -12,6 +13,30 @@ from app.services import clasificador
 logger = logging.getLogger(__name__)
 
 CAMPOS_EDITABLES = ("estado", "prioridad", "categoria", "asignado_a")
+TAMANO_PAGINA_BANDEJA = 25
+SIN_ASIGNAR = "sin_asignar"
+
+
+@dataclass(frozen=True)
+class FilaBandeja:
+    id: int
+    asunto: str
+    solicitante_nombre: str
+    categoria: str | None
+    prioridad: str
+    estado: str
+    asignado_a: int | None
+    asignado_nombre: str | None
+    creado_en: str
+
+
+@dataclass(frozen=True)
+class PaginaBandeja:
+    items: list[FilaBandeja]
+    total: int
+    page: int
+    page_size: int
+    paginas: int
 
 
 class TicketNoEncontradoError(LookupError):
@@ -107,6 +132,85 @@ def _escapar_like(texto: str) -> str:
     return texto.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
 
 
+def _construir_where(
+    *,
+    estado: str | None,
+    categoria: str | None,
+    prioridad: str | None,
+    asignado_a: int | str | None,
+    q: str | None,
+    columnas_busqueda: tuple[str, ...],
+) -> tuple[str, list[object]]:
+    condiciones: list[str] = []
+    parametros: list[object] = []
+    for columna, valor in (
+        ("estado", estado),
+        ("categoria", categoria),
+        ("prioridad", prioridad),
+    ):
+        if valor is not None:
+            condiciones.append(f"{columna} = ?")
+            parametros.append(valor)
+    if asignado_a == SIN_ASIGNAR:
+        condiciones.append("asignado_a IS NULL")
+    elif asignado_a is not None:
+        condiciones.append("asignado_a = ?")
+        parametros.append(asignado_a)
+    q = (q or "").strip()
+    if q:
+        patron = f"%{_escapar_like(q)}%"
+        condiciones.append(
+            "(" + " OR ".join(f"{c} LIKE ? ESCAPE '\\'" for c in columnas_busqueda) + ")"
+        )
+        parametros.extend([patron] * len(columnas_busqueda))
+    where = f" WHERE {' AND '.join(condiciones)}" if condiciones else ""
+    return where, parametros
+
+
+def listar_bandeja(
+    conn: sqlite3.Connection,
+    *,
+    page: int = 1,
+    page_size: int = TAMANO_PAGINA_BANDEJA,
+    estado: str | None = None,
+    categoria: str | None = None,
+    prioridad: str | None = None,
+    asignado_a: int | str | None = None,
+    q: str | None = None,
+) -> PaginaBandeja:
+    """Página de tickets para la bandeja, con el nombre del asignado.
+
+    `asignado_a` admite un id de usuario o `SIN_ASIGNAR`. La búsqueda también mira los datos
+    del cliente. Una página fuera de rango se ajusta a la última.
+    """
+    where, parametros = _construir_where(
+        estado=estado,
+        categoria=categoria,
+        prioridad=prioridad,
+        asignado_a=asignado_a,
+        q=q,
+        columnas_busqueda=("asunto", "descripcion", "solicitante_nombre", "solicitante_email"),
+    )
+    desde = "FROM tickets LEFT JOIN usuarios ON usuarios.id = tickets.asignado_a"
+    total = conn.execute(f"SELECT COUNT(*) {desde}{where}", parametros).fetchone()[0]
+    paginas = math.ceil(total / page_size)
+    page = max(1, min(page, paginas))
+    filas = conn.execute(
+        "SELECT tickets.id, tickets.asunto, tickets.solicitante_nombre, tickets.categoria, "
+        "tickets.prioridad, tickets.estado, tickets.asignado_a, tickets.creado_en, "
+        f"usuarios.nombre AS asignado_nombre {desde}{where} "
+        "ORDER BY tickets.creado_en DESC, tickets.id DESC LIMIT ? OFFSET ?",
+        [*parametros, page_size, (page - 1) * page_size],
+    ).fetchall()
+    return PaginaBandeja(
+        items=[FilaBandeja(**dict(f)) for f in filas],
+        total=total,
+        page=page,
+        page_size=page_size,
+        paginas=paginas,
+    )
+
+
 def listar_tickets(
     conn: sqlite3.Connection,
     *,
@@ -118,23 +222,14 @@ def listar_tickets(
     asignado_a: int | None = None,
     q: str | None = None,
 ) -> PaginaTickets:
-    condiciones: list[str] = []
-    parametros: list[object] = []
-    for columna, valor in (
-        ("estado", estado),
-        ("categoria", categoria),
-        ("prioridad", prioridad),
-        ("asignado_a", asignado_a),
-    ):
-        if valor is not None:
-            condiciones.append(f"{columna} = ?")
-            parametros.append(valor)
-    q = (q or "").strip()
-    if q:
-        patron = f"%{_escapar_like(q)}%"
-        condiciones.append("(asunto LIKE ? ESCAPE '\\' OR descripcion LIKE ? ESCAPE '\\')")
-        parametros.extend([patron, patron])
-    where = f" WHERE {' AND '.join(condiciones)}" if condiciones else ""
+    where, parametros = _construir_where(
+        estado=estado,
+        categoria=categoria,
+        prioridad=prioridad,
+        asignado_a=asignado_a,
+        q=q,
+        columnas_busqueda=("asunto", "descripcion"),
+    )
 
     total = conn.execute(f"SELECT COUNT(*) FROM tickets{where}", parametros).fetchone()[0]
     filas = conn.execute(

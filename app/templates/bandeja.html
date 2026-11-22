@@ -11,6 +11,59 @@
 </header>
 <main class="contenido">
   <h1>Bandeja</h1>
-  <p>Aún no hay tickets que mostrar.</p>
+  <form id="filtros" class="filtros" method="get" action="/bandeja"
+        hx-get="/bandeja" hx-target="#tabla-tickets" hx-push-url="true" hx-sync="this:replace"
+        hx-trigger="change, input changed delay:300ms from:#q, submit">
+    <div class="filtro filtro-busqueda">
+      <label for="q">Buscar</label>
+      <input id="q" name="q" type="search" value="{{ filtros.q }}"
+             placeholder="Asunto, texto o cliente" autocomplete="off">
+    </div>
+    <div class="filtro">
+      <label for="estado">Estado</label>
+      <select id="estado" name="estado">
+        <option value="">Todos</option>
+        {% for clave, texto in etiquetas_estado.items() %}
+        <option value="{{ clave }}"{% if filtros.estado == clave %} selected{% endif %}>{{ texto }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="filtro">
+      <label for="categoria">Categoría</label>
+      <select id="categoria" name="categoria">
+        <option value="">Todas</option>
+        {% for clave, texto in etiquetas_categoria.items() %}
+        <option value="{{ clave }}"{% if filtros.categoria == clave %} selected{% endif %}>{{ texto }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="filtro">
+      <label for="prioridad">Prioridad</label>
+      <select id="prioridad" name="prioridad">
+        <option value="">Todas</option>
+        {% for clave, texto in etiquetas_prioridad.items() %}
+        <option value="{{ clave }}"{% if filtros.prioridad == clave %} selected{% endif %}>{{ texto }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="filtro">
+      <label for="asignado_a">Asignado a</label>
+      <select id="asignado_a" name="asignado_a">
+        <option value="">Cualquiera</option>
+        <option value="{{ sin_asignar }}"{% if filtros.asignado_a == sin_asignar %} selected{% endif %}>Sin asignar</option>
+        {% for agente in agentes %}
+        <option value="{{ agente.id }}"{% if filtros.asignado_a == agente.id|string %} selected{% endif %}>{{ agente.nombre }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="filtro filtro-casilla">
+      <input id="mios" name="mios" type="checkbox" value="1"{% if filtros.mios %} checked{% endif %}>
+      <label for="mios">Solo míos</label>
+    </div>
+    <noscript><button type="submit" class="boton">Filtrar</button></noscript>
+  </form>
+  <div id="tabla-tickets" aria-live="polite">
+    {% include "_tabla_tickets.html" %}
+  </div>
 </main>
 {% endblock %}

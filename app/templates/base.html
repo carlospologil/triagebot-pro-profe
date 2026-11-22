@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block titulo %}TriageBot Pro{% endblock %}</title>
   <link rel="stylesheet" href="/static/estilos.css">
+  {% block scripts %}<script src="https://unpkg.com/htmx.org@2.0.4" defer></script>{% endblock %}
 </head>
 <body class="{% block clase_body %}{% endblock %}">
   {% block cuerpo %}{% endblock %}

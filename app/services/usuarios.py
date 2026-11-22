@@ -74,6 +74,11 @@ def create_user(
     return _from_row(row)
 
 
+def listar_usuarios_activos(conn: sqlite3.Connection) -> list[Usuario]:
+    filas = conn.execute("SELECT * FROM usuarios WHERE activo = 1 ORDER BY nombre, id").fetchall()
+    return [_from_row(f) for f in filas]
+
+
 def get_user_by_email(conn: sqlite3.Connection, email: str) -> Usuario | None:
     row = conn.execute(
         "SELECT * FROM usuarios WHERE email = ?", (normalize_email(email),)

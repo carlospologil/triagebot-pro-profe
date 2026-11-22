@@ -82,7 +82,11 @@ def detalle(ticket_id: int, conn: Db):
         raise HTTPException(status_code=404, detail="Ticket no encontrado") from None
 
 
-@router.patch("/{ticket_id}", response_model=TicketSalida, responses=_NO_ENCONTRADO)
+@router.patch(
+    "/{ticket_id}",
+    response_model=TicketSalida,
+    responses={**_NO_ENCONTRADO, 409: {"description": "Transición de estado no permitida."}},
+)
 def actualizar(ticket_id: int, datos: TicketActualizar, conn: Db, clock: RelojDep):
     """Cambia estado, prioridad, categoría y/o asignación; solo se tocan los campos enviados."""
     cambios = datos.model_dump(exclude_unset=True)
@@ -94,3 +98,5 @@ def actualizar(ticket_id: int, datos: TicketActualizar, conn: Db, clock: RelojDe
         raise HTTPException(status_code=404, detail="Ticket no encontrado") from None
     except servicio.AsignadoInvalidoError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from None
+    except servicio.TransicionNoPermitidaError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from None

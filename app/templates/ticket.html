@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block titulo %}{{ t.asunto }} · TriageBot Pro{% endblock %}
+{% block scripts %}
+{{ super() }}
+<meta name="htmx-config" content='{"responseHandling":[{"code":"204","swap":false},{"code":"[23]..","swap":true},{"code":"409|422","swap":true,"error":false},{"code":"[45]..","swap":false,"error":true}]}'>
+{% endblock %}
+{% block cuerpo %}
+<header class="barra">
+  <span class="marca">TriageBot <span>Pro</span></span>
+  <form method="post" action="/logout" class="barra-usuario">
+    {% if usuario.rol == "admin" %}<a href="/admin">Administración</a>{% endif %}
+    <span>{{ usuario.nombre }}</span>
+    <button type="submit" class="boton boton-secundario">Cerrar sesión</button>
+  </form>
+</header>
+<main class="contenido">
+  <p class="migas"><a href="/bandeja">&larr; Volver a la bandeja</a></p>
+  <h1 class="titulo-ticket">{{ t.asunto }} <span class="tenue">#{{ t.id }}</span></h1>
+  <div class="detalle">
+    <section class="tarjeta principal" aria-label="Contenido del ticket">
+      <h2>Mensaje del cliente</h2>
+      <p class="cliente">
+        <strong>{{ t.nombre_cliente }}</strong>
+        <a href="mailto:{{ t.email_cliente }}">{{ t.email_cliente }}</a>
+      </p>
+      <div class="texto-ticket">{{ t.texto }}</div>
+      {% include "_fechas.html" %}
+    </section>
+    <aside class="lateral" aria-label="Gestión del ticket">
+      {% include "_panel_estado.html" %}
+      {% include "_panel_asignacion.html" %}
+      {% include "_panel_clasificacion.html" %}
+    </aside>
+  </div>
+</main>
+{% endblock %}

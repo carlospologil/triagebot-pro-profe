@@ -91,7 +91,7 @@ def test_la_fila_muestra_los_datos_del_ticket(sesion, crear, agente, reloj):
         cliente="Marta Pérez",
         categoria="cuenta",
         prioridad="alta",
-        estado="en_progreso",
+        estado="en_curso",
         asignado_a=agente.id,
         creado="2026-03-02T06:00:00Z",
     )
@@ -111,10 +111,13 @@ def test_antiguedad_usa_el_reloj_inyectado(sesion, crear, reloj):
 
 
 def test_prioridad_y_estado_son_etiquetas_con_texto_y_color(sesion, crear):
-    crear("Caída total", prioridad="urgente", estado="pendiente")
+    crear("Caída total", prioridad="urgente", estado="esperando_cliente")
     texto = sesion.get("/bandeja").text
     assert '<span class="etiqueta etiqueta-prioridad-urgente">Urgente</span>' in texto
-    assert '<span class="etiqueta etiqueta-estado-pendiente">Pendiente</span>' in texto
+    assert (
+        '<span class="etiqueta etiqueta-estado-esperando_cliente">Esperando al cliente</span>'
+        in texto
+    )
 
 
 @pytest.mark.parametrize("prioridad", ["baja", "media", "alta", "urgente"])
@@ -126,7 +129,9 @@ def test_cada_prioridad_lleva_su_clase_y_su_texto(sesion, crear, prioridad):
     )  # fmt: skip
 
 
-@pytest.mark.parametrize("estado", ["nuevo", "en_progreso", "pendiente", "resuelto", "cerrado"])
+@pytest.mark.parametrize(
+    "estado", ["nuevo", "en_curso", "esperando_cliente", "resuelto", "cerrado"]
+)
 def test_cada_estado_lleva_su_clase_y_texto(sesion, crear, estado):
     crear("T", estado=estado)
     texto = sesion.get("/bandeja").text
@@ -172,7 +177,7 @@ def surtido(crear, agente, otro):
     crear("A-facturacion-alta", categoria="facturacion", prioridad="alta", asignado_a=agente.id)
     crear("B-tecnico-baja", categoria="tecnico", prioridad="baja", asignado_a=otro.id,
           estado="resuelto")  # fmt: skip
-    crear("C-sin-asignar", categoria="tecnico", prioridad="alta", estado="en_progreso")
+    crear("C-sin-asignar", categoria="tecnico", prioridad="alta", estado="en_curso")
 
 
 @pytest.mark.parametrize(
@@ -309,7 +314,7 @@ def test_el_fragmento_no_incluye_la_pagina_completa(sesion, crear):
 
 
 def test_el_fragmento_aplica_los_filtros(sesion, surtido):
-    r = sesion.get("/bandeja?categoria=tecnico&prioridad=alta&estado=en_progreso", headers=HX)
+    r = sesion.get("/bandeja?categoria=tecnico&prioridad=alta&estado=en_curso", headers=HX)
     assert "<html" not in r.text
     assert asuntos(r) == ["C-sin-asignar"]
     assert "1 ticket con los filtros aplicados" in re.sub(r"\s+", " ", r.text)

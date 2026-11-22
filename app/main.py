@@ -14,7 +14,7 @@ from app.clock import Clock, system_clock
 from app.config import Settings, load_settings
 from app.db import init_db
 from app.middleware import exigir_sesion
-from app.routers import admin, bandeja, health, sesion, tickets
+from app.routers import admin, bandeja, detalle, health, sesion, tickets
 from app.templating import templates
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -27,11 +27,13 @@ async def lifespan(application: FastAPI) -> AsyncIterator[None]:
 
 
 async def _manejar_http(request: Request, exc: StarletteHTTPException) -> Response:
-    """Los 403 de páginas se muestran como HTML; el resto, y las rutas /api, como siempre."""
+    """Los 403 y los tickets inexistentes de las páginas se muestran como HTML."""
     if exc.status_code == 403 and not request.url.path.startswith("/api"):
         return templates.TemplateResponse(
             request, "prohibido.html", {"mensaje": exc.detail}, status_code=403
         )
+    if exc.status_code == 404 and request.url.path.startswith("/tickets/"):
+        return templates.TemplateResponse(request, "no_encontrado.html", {}, status_code=404)
     return await http_exception_handler(request, exc)
 
 
@@ -48,6 +50,7 @@ def create_app(settings: Settings | None = None, clock: Clock = system_clock) ->
     application.include_router(health.router)
     application.include_router(sesion.router)
     application.include_router(bandeja.router)
+    application.include_router(detalle.router)
     application.include_router(admin.router)
     application.include_router(tickets.router)
     application.add_exception_handler(StarletteHTTPException, _manejar_http)

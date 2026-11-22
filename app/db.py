@@ -107,6 +107,16 @@ MIGRATIONS: tuple[Migration, ...] = (
             "ALTER TABLE usuarios ADD COLUMN bloqueado_hasta TEXT",
         ),
     ),
+    Migration(
+        version=3,
+        name="ciclo_de_vida_del_ticket",
+        statements=(
+            "UPDATE tickets SET estado = 'en_curso' WHERE estado = 'en_progreso'",
+            "UPDATE tickets SET estado = 'esperando_cliente' WHERE estado = 'pendiente'",
+            "ALTER TABLE tickets ADD COLUMN corregido_por_persona INTEGER NOT NULL DEFAULT 0 "
+            "CHECK (corregido_por_persona IN (0, 1))",
+        ),
+    ),
 )
 
 

@@ -1,0 +1,6 @@
+<dl id="fechas" class="fechas"{% if oob %} hx-swap-oob="true"{% endif %}>
+  <div><dt>Creado</dt><dd>{{ fecha(t.creado_en) }}</dd></div>
+  <div><dt>Última actualización</dt><dd>{{ fecha(t.actualizado_en) }}</dd></div>
+  <div><dt>Resuelto</dt><dd>{{ fecha(t.resuelto_en) }}</dd></div>
+  <div><dt>Fecha límite</dt><dd>{% if t.fecha_limite %}{{ fecha(t.fecha_limite) }}{% else %}Sin plazo definido{% endif %}</dd></div>
+</dl>

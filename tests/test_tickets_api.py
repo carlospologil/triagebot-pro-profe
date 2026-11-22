@@ -183,7 +183,7 @@ def preparar(sesion, agente, otro_agente):
     t3 = nuevo(sesion, asunto="Pedido retrasado", texto="Llega tarde la factura")
     sesion.patch(
         f"/api/tickets/{t1['id']}",
-        json={"estado": "en_progreso", "prioridad": "alta", "categoria": "facturacion",
+        json={"estado": "en_curso", "prioridad": "alta", "categoria": "facturacion",
               "asignado_a": agente.id},
     )  # fmt: skip
     sesion.patch(
@@ -197,7 +197,7 @@ def preparar(sesion, agente, otro_agente):
 
 def test_filtro_por_estado(sesion, agente, otro_agente):
     t1, t2, t3 = preparar(sesion, agente, otro_agente)
-    assert ids(sesion.get("/api/tickets", params={"estado": "en_progreso"})) == [t1]
+    assert ids(sesion.get("/api/tickets", params={"estado": "en_curso"})) == [t1]
     assert ids(sesion.get("/api/tickets", params={"estado": "resuelto"})) == [t2]
     assert ids(sesion.get("/api/tickets", params={"estado": "nuevo"})) == [t3]
     assert ids(sesion.get("/api/tickets", params={"estado": "cerrado"})) == []
@@ -249,7 +249,7 @@ def test_filtro_q_trata_comodines_como_texto(sesion):
 
 def test_filtros_combinados(sesion, agente, otro_agente):
     t1, _, t3 = preparar(sesion, agente, otro_agente)
-    r = sesion.get("/api/tickets", params={"categoria": "facturacion", "estado": "en_progreso"})
+    r = sesion.get("/api/tickets", params={"categoria": "facturacion", "estado": "en_curso"})
     assert ids(r) == [t1]
     r = sesion.get("/api/tickets", params={"categoria": "facturacion", "q": "pedido"})
     assert ids(r) == [t3]
@@ -287,13 +287,13 @@ def test_patch_cambia_todos_los_campos(sesion, agente, reloj):
     reloj.avanzar(hours=1)
     r = sesion.patch(
         f"/api/tickets/{t['id']}",
-        json={"estado": "en_progreso", "prioridad": "urgente", "categoria": "tecnico",
+        json={"estado": "en_curso", "prioridad": "urgente", "categoria": "tecnico",
               "asignado_a": agente.id},
     )  # fmt: skip
     assert r.status_code == 200
     d = r.json()
     assert (d["estado"], d["prioridad"], d["categoria"], d["asignado_a"]) == (
-        "en_progreso",
+        "en_curso",
         "urgente",
         "tecnico",
         agente.id,
@@ -306,8 +306,12 @@ def test_patch_cambia_todos_los_campos(sesion, agente, reloj):
 def test_patch_parcial_solo_toca_lo_enviado(sesion, agente):
     t = nuevo(sesion)
     sesion.patch(f"/api/tickets/{t['id']}", json={"prioridad": "alta", "asignado_a": agente.id})
-    d = sesion.patch(f"/api/tickets/{t['id']}", json={"estado": "pendiente"}).json()
-    assert (d["estado"], d["prioridad"], d["asignado_a"]) == ("pendiente", "alta", agente.id)
+    d = sesion.patch(f"/api/tickets/{t['id']}", json={"estado": "esperando_cliente"}).json()
+    assert (d["estado"], d["prioridad"], d["asignado_a"]) == (
+        "esperando_cliente",
+        "alta",
+        agente.id,
+    )
     assert d["asunto"] == t["asunto"] and d["texto"] == t["texto"]
 
 
@@ -326,7 +330,7 @@ def test_patch_resuelve_y_reabre(sesion, reloj):
     reloj.avanzar(hours=1)
     d = sesion.patch(f"/api/tickets/{t['id']}", json={"estado": "cerrado"}).json()
     assert d["resuelto_en"] == "2026-03-02T11:00:00Z"
-    d = sesion.patch(f"/api/tickets/{t['id']}", json={"estado": "en_progreso"}).json()
+    d = sesion.patch(f"/api/tickets/{t['id']}", json={"estado": "en_curso"}).json()
     assert d["resuelto_en"] is None
 
 

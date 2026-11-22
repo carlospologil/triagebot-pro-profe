@@ -4,13 +4,22 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, field_validator
 
-Estado = Literal["nuevo", "en_progreso", "pendiente", "resuelto", "cerrado"]
+Estado = Literal["nuevo", "en_curso", "esperando_cliente", "resuelto", "cerrado"]
 Prioridad = Literal["baja", "media", "alta", "urgente"]
 Categoria = Literal[
     "facturacion", "tecnico", "cuenta", "comercial", "envio", "otro", "sin_clasificar"
 ]
 
 ESTADOS_FINALES: tuple[str, ...] = ("resuelto", "cerrado")
+
+# Única definición de las transiciones de estado permitidas: estado actual -> estados destino.
+TRANSICIONES: dict[Estado, tuple[Estado, ...]] = {
+    "nuevo": ("en_curso", "esperando_cliente", "resuelto", "cerrado"),
+    "en_curso": ("esperando_cliente", "resuelto", "cerrado"),
+    "esperando_cliente": ("en_curso", "resuelto", "cerrado"),
+    "resuelto": ("en_curso", "cerrado"),
+    "cerrado": ("en_curso",),
+}
 
 Texto = Annotated[str, StringConstraints(strip_whitespace=True)]
 Email = Annotated[
@@ -51,7 +60,7 @@ class TicketActualizar(BaseModel):
 
     model_config = ConfigDict(
         extra="forbid",
-        json_schema_extra={"example": {"estado": "en_progreso", "asignado_a": 2}},
+        json_schema_extra={"example": {"estado": "en_curso", "asignado_a": 2}},
     )
 
     estado: Estado | None = None
@@ -79,6 +88,7 @@ class TicketSalida(BaseModel):
     prioridad: Prioridad
     categoria: Categoria | None
     resumen_ia: str | None
+    corregido_por_persona: bool
     asignado_a: int | None
     fecha_limite: str | None
     creado_en: str

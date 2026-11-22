@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from app.clock import Clock, system_clock, to_iso
-from app.schemas import ESTADOS_FINALES, PaginaTickets, TicketCrear, TicketSalida
+from app.schemas import ESTADOS_FINALES, TRANSICIONES, PaginaTickets, TicketCrear, TicketSalida
 from app.services import clasificador
 
 logger = logging.getLogger(__name__)
@@ -47,6 +47,19 @@ class AsignadoInvalidoError(ValueError):
     """El usuario al que se asigna el ticket no existe o está desactivado."""
 
 
+class TransicionNoPermitidaError(ValueError):
+    """El cambio de estado pedido no figura en la tabla de transiciones."""
+
+    def __init__(self, origen: str, destino: str) -> None:
+        super().__init__(f"No se puede pasar de «{origen}» a «{destino}».")
+        self.origen = origen
+        self.destino = destino
+
+
+def transiciones_permitidas(estado: str) -> tuple[str, ...]:
+    return TRANSICIONES.get(estado, ())
+
+
 def _a_salida(row: sqlite3.Row) -> TicketSalida:
     return TicketSalida(
         id=row["id"],
@@ -58,6 +71,7 @@ def _a_salida(row: sqlite3.Row) -> TicketSalida:
         prioridad=row["prioridad"],
         categoria=row["categoria"],
         resumen_ia=row["resumen_ia"],
+        corregido_por_persona=bool(row["corregido_por_persona"]),
         asignado_a=row["asignado_a"],
         fecha_limite=row["fecha_limite"],
         creado_en=row["creado_en"],
@@ -113,6 +127,7 @@ def clasificar_ticket(
             "categoria": resultado.categoria,
             "prioridad": resultado.prioridad,
             "resumen_ia": resultado.justificacion,
+            "corregido_por_persona": 0,
         }
     cambios["actualizado_en"] = to_iso(clock())
     asignaciones = ", ".join(f"{columna} = ?" for columna in cambios)
@@ -264,14 +279,21 @@ def actualizar_ticket(
         if existe is None:
             raise AsignadoInvalidoError("El usuario asignado no existe o está desactivado.")
 
-    ahora = to_iso(clock())
     valores = dict(cambios)
+    if valores.get("estado") == actual["estado"]:
+        del valores["estado"]
+    if "estado" in valores and valores["estado"] not in TRANSICIONES.get(actual["estado"], ()):
+        raise TransicionNoPermitidaError(actual["estado"], valores["estado"])
+
+    ahora = to_iso(clock())
     valores["actualizado_en"] = ahora
-    if "estado" in cambios:
-        if cambios["estado"] in ESTADOS_FINALES:
+    if "estado" in valores:
+        if valores["estado"] in ESTADOS_FINALES:
             valores["resuelto_en"] = actual["resuelto_en"] or ahora
         else:
             valores["resuelto_en"] = None
+    if any(c in valores and valores[c] != actual[c] for c in ("categoria", "prioridad")):
+        valores["corregido_por_persona"] = 1
 
     asignaciones = ", ".join(f"{columna} = ?" for columna in valores)
     conn.execute(f"UPDATE tickets SET {asignaciones} WHERE id = ?", [*valores.values(), ticket_id])

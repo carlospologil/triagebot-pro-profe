@@ -410,7 +410,7 @@ def test_la_migracion_renombra_los_estados_antiguos(settings):
             (estado,),
         )
     conn.commit()
-    assert migrate(conn, MIGRATIONS) == [3]
+    assert migrate(conn, MIGRATIONS[:3]) == [3]
     filas = conn.execute("SELECT estado, corregido_por_persona FROM tickets ORDER BY id")
     assert [tuple(f) for f in filas] == [
         ("en_curso", 0),

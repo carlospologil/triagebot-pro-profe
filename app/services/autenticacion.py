@@ -6,10 +6,25 @@ from functools import lru_cache
 
 from app.auth import hash_password, verify_password
 from app.clock import Clock, to_iso
+from app.services import auditoria
 from app.services.usuarios import Usuario, _from_row, normalize_email
 
 MAX_INTENTOS_FALLIDOS = 5
 DURACION_BLOQUEO = timedelta(minutes=15)
+
+
+def _registrar_fallo(
+    conn: sqlite3.Connection, ahora: str, email: str, row: sqlite3.Row | None, motivo: str
+) -> None:
+    """Deja constancia del intento fallido; el motivo solo es visible en la auditoría."""
+    auditoria.registrar(
+        conn,
+        auditoria.LOGIN_FALLIDO,
+        ahora=ahora,
+        usuario_id=row["id"] if row else None,
+        usuario_email=normalize_email(email)[: auditoria.MAX_EMAIL_REGISTRADO],
+        detalle=motivo,
+    )
 
 
 @lru_cache(maxsize=1)
@@ -49,13 +64,18 @@ def _autenticar(
 
     if row is None or not row["activo"]:
         verify_password(password, _hash_señuelo())
+        _registrar_fallo(
+            conn, ahora, email, row, "Usuario desconocido" if row is None else "Usuario inactivo"
+        )
         return None
 
     if row["bloqueado_hasta"] and row["bloqueado_hasta"] > ahora:
         verify_password(password, _hash_señuelo())
+        _registrar_fallo(conn, ahora, email, row, "Acceso bloqueado temporalmente")
         return None
 
     if not verify_password(password, row["password_hash"]):
+        _registrar_fallo(conn, ahora, email, row, "Contraseña incorrecta")
         # Un único UPDATE atómico: al llegar al máximo se bloquea y se reinicia el contador.
         conn.execute(
             "UPDATE usuarios SET "
@@ -76,6 +96,13 @@ def _autenticar(
     conn.execute(
         "UPDATE usuarios SET intentos_fallidos = 0, bloqueado_hasta = NULL WHERE id = ?",
         (row["id"],),
+    )
+    auditoria.registrar(
+        conn,
+        auditoria.LOGIN_CORRECTO,
+        ahora=ahora,
+        usuario_id=row["id"],
+        usuario_email=row["email"],
     )
     return _from_row(row)
 

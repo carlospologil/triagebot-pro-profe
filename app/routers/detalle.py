@@ -12,12 +12,14 @@ from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
 from app.clock import Clock, get_clock
 from app.db import get_db
+from app.services import auditoria
 from app.services import tickets as servicio
 from app.services.formato import (
     ETIQUETAS_CATEGORIA,
     ETIQUETAS_ESTADO,
     ETIQUETAS_PRIORIDAD,
     formatear_fecha,
+    valor_auditoria,
 )
 from app.services.sla import calcular_plazo
 from app.services.usuarios import get_user, listar_usuarios_activos
@@ -60,6 +62,9 @@ def _contexto(request: Request, conn: sqlite3.Connection, ticket, errores: dict[
         "etiquetas_prioridad": ETIQUETAS_PRIORIDAD,
         "etiquetas_categoria": ETIQUETAS_CATEGORIA,
         "fecha": formatear_fecha,
+        "historial": auditoria.linea_de_tiempo(conn, ticket.id),
+        "etiquetas_accion": auditoria.ETIQUETAS_ACCION,
+        "valor_auditoria": valor_auditoria,
         "plazo": calcular_plazo(ticket.fecha_limite, ticket.estado, get_clock(request)()),
         "oob": False,
     }
@@ -83,6 +88,7 @@ def _resultado(
     contexto = _contexto(request, conn, _cargar(conn, ticket_id), {panel: error} if error else {})
     html = templates.get_template(f"_panel_{panel}.html").render(contexto)
     html += templates.get_template("_fechas.html").render({**contexto, "oob": True})
+    html += templates.get_template("_historial.html").render({**contexto, "oob": True})
     return HTMLResponse(
         html, status_code=200 if error is None else status, headers={"Vary": "HX-Request"}
     )
@@ -106,7 +112,9 @@ def cambiar_estado(
     if estado not in ETIQUETAS_ESTADO:
         return _resultado(request, conn, ticket_id, "estado", "Elige un estado válido.", 422)
     try:
-        servicio.actualizar_ticket(conn, ticket_id, {"estado": estado}, reloj)
+        servicio.actualizar_ticket(
+            conn, ticket_id, {"estado": estado}, reloj, usuario_id=request.state.usuario.id
+        )
     except servicio.TransicionNoPermitidaError as exc:
         return _resultado(request, conn, ticket_id, "estado", str(exc), 409)
     return _resultado(request, conn, ticket_id, "estado")
@@ -131,7 +139,9 @@ def asignar(
         if not 1 <= destino <= MAX_ENTERO_SQLITE:
             return _resultado(request, conn, ticket_id, "asignacion", "Persona no válida.", 422)
     try:
-        servicio.actualizar_ticket(conn, ticket_id, {"asignado_a": destino}, reloj)
+        servicio.actualizar_ticket(
+            conn, ticket_id, {"asignado_a": destino}, reloj, usuario_id=request.state.usuario.id
+        )
     except servicio.AsignadoInvalidoError as exc:
         return _resultado(request, conn, ticket_id, "asignacion", str(exc), 422)
     return _resultado(request, conn, ticket_id, "asignacion")
@@ -163,5 +173,5 @@ def corregir_clasificacion(
         return _resultado(
             request, conn, ticket_id, "clasificacion", "Elige una categoría o una prioridad.", 422
         )
-    servicio.actualizar_ticket(conn, ticket_id, cambios, reloj)
+    servicio.actualizar_ticket(conn, ticket_id, cambios, reloj, usuario_id=request.state.usuario.id)
     return _resultado(request, conn, ticket_id, "clasificacion")

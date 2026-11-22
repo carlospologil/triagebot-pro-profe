@@ -17,6 +17,7 @@
   <p class="migas"><a href="/bandeja">&larr; Volver a la bandeja</a></p>
   <h1 class="titulo-ticket">{{ t.asunto }} <span class="tenue">#{{ t.id }}</span></h1>
   <div class="detalle">
+    <div class="columna-principal">
     <section class="tarjeta principal" aria-label="Contenido del ticket">
       <h2>Mensaje del cliente</h2>
       <p class="cliente">
@@ -26,6 +27,8 @@
       <div class="texto-ticket">{{ t.texto }}</div>
       {% include "_fechas.html" %}
     </section>
+    {% include "_historial.html" %}
+    </div>
     <aside class="lateral" aria-label="Gestión del ticket">
       {% include "_panel_estado.html" %}
       {% include "_panel_asignacion.html" %}

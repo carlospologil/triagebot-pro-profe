@@ -5,6 +5,7 @@ from dataclasses import dataclass
 
 from app.auth import hash_password, verify_password
 from app.clock import Clock, system_clock, to_iso
+from app.services import auditoria
 
 ROLES = ("admin", "agente")
 
@@ -50,7 +51,9 @@ def create_user(
     password: str,
     rol: str = "agente",
     clock: Clock = system_clock,
+    actor_id: int | None = None,
 ) -> Usuario:
+    """Crea un usuario y lo registra en la auditoría a nombre de `actor_id` (None: sin sesión)."""
     email = normalize_email(email)
     nombre = nombre.strip()
     if "@" not in email or email.startswith("@") or email.endswith("@"):
@@ -60,11 +63,20 @@ def create_user(
     if rol not in ROLES:
         raise UsuarioError(f"Rol no válido: debe ser uno de {', '.join(ROLES)}.")
     password_hash = hash_password(password)
+    ahora = to_iso(clock())
     try:
         cursor = conn.execute(
             "INSERT INTO usuarios (email, nombre, password_hash, rol, activo, creado_en) "
             "VALUES (?, ?, ?, ?, 1, ?)",
-            (email, nombre, password_hash, rol, to_iso(clock())),
+            (email, nombre, password_hash, rol, ahora),
+        )
+        auditoria.registrar(
+            conn,
+            auditoria.USUARIO_CREADO,
+            ahora=ahora,
+            usuario_id=actor_id,
+            valor_nuevo=f"{email} ({rol})",
+            detalle=None if actor_id is not None else "Alta sin sesión (línea de comandos)",
         )
         conn.commit()
     except sqlite3.IntegrityError as exc:

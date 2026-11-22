@@ -2,6 +2,8 @@
 
 from datetime import UTC, datetime
 
+from app.services import auditoria
+
 ETIQUETAS_ESTADO = {
     "nuevo": "Nuevo",
     "en_curso": "En curso",
@@ -19,6 +21,24 @@ ETIQUETAS_CATEGORIA = {
     "otro": "Otro",
     "sin_clasificar": "Sin clasificar",
 }
+
+
+def valor_auditoria(accion: str, valor: str | None) -> str:
+    """Traduce un valor guardado en la auditoría a su texto de interfaz («—» si no hay valor)."""
+    if valor is None:
+        return "—"
+    if accion == auditoria.ESTADO_CAMBIADO:
+        return ETIQUETAS_ESTADO.get(valor, valor)
+    if accion == auditoria.PRIORIDAD_CAMBIADA:
+        return ETIQUETAS_PRIORIDAD.get(valor, valor)
+    if accion == auditoria.CATEGORIA_CAMBIADA:
+        return ETIQUETAS_CATEGORIA.get(valor, valor)
+    if accion in (auditoria.TICKET_CLASIFICADO, auditoria.TICKET_RECLASIFICADO):
+        categoria, _, prioridad = valor.partition(" / ")
+        return f"{ETIQUETAS_CATEGORIA.get(categoria, categoria)} / " + (
+            ETIQUETAS_PRIORIDAD.get(prioridad, prioridad)
+        )
+    return valor
 
 
 def formatear_fecha(iso: str | None) -> str:

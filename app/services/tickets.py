@@ -8,11 +8,17 @@ from typing import Any
 
 from app.clock import Clock, system_clock, to_iso
 from app.schemas import ESTADOS_FINALES, TRANSICIONES, PaginaTickets, TicketCrear, TicketSalida
-from app.services import clasificador, sla
+from app.services import auditoria, clasificador, sla
 
 logger = logging.getLogger(__name__)
 
 CAMPOS_EDITABLES = ("estado", "prioridad", "categoria", "asignado_a")
+ACCION_POR_CAMPO = {
+    "estado": auditoria.ESTADO_CAMBIADO,
+    "prioridad": auditoria.PRIORIDAD_CAMBIADA,
+    "categoria": auditoria.CATEGORIA_CAMBIADA,
+    "asignado_a": auditoria.ASIGNACION_CAMBIADA,
+}
 TAMANO_PAGINA_BANDEJA = 25
 SIN_ASIGNAR = "sin_asignar"
 
@@ -82,7 +88,11 @@ def _a_salida(row: sqlite3.Row) -> TicketSalida:
 
 
 def crear_ticket(
-    conn: sqlite3.Connection, datos: TicketCrear, clock: Clock = system_clock
+    conn: sqlite3.Connection,
+    datos: TicketCrear,
+    clock: Clock = system_clock,
+    *,
+    usuario_id: int | None = None,
 ) -> TicketSalida:
     ahora = to_iso(clock())
     cursor = conn.execute(
@@ -99,8 +109,20 @@ def crear_ticket(
             ahora,
         ),
     )
+    auditoria.registrar(
+        conn,
+        auditoria.TICKET_CREADO,
+        ahora=ahora,
+        usuario_id=usuario_id,
+        ticket_id=cursor.lastrowid,
+        valor_nuevo=datos.asunto,
+    )
     conn.commit()
     return obtener_ticket(conn, cursor.lastrowid)
+
+
+def _describir_clasificacion(categoria: str | None, prioridad: str) -> str:
+    return f"{categoria or 'sin categoría'} / {prioridad}"
 
 
 def clasificar_ticket(
@@ -110,6 +132,7 @@ def clasificar_ticket(
     clock: Clock = system_clock,
     *,
     marcar_sin_clasificar: bool = False,
+    usuario_id: int | None = None,
 ) -> TicketSalida:
     """Clasifica el ticket con el LLM y guarda categoría, prioridad y justificación.
 
@@ -133,9 +156,21 @@ def clasificar_ticket(
             "corregido_por_persona": 0,
             "fecha_limite": sla.calcular_fecha_limite(ticket.creado_en, resultado.prioridad),
         }
-    cambios["actualizado_en"] = to_iso(clock())
+    ahora = to_iso(clock())
+    cambios["actualizado_en"] = ahora
     asignaciones = ", ".join(f"{columna} = ?" for columna in cambios)
     conn.execute(f"UPDATE tickets SET {asignaciones} WHERE id = ?", [*cambios.values(), ticket_id])
+    auditoria.registrar(
+        conn,
+        auditoria.TICKET_CLASIFICADO if marcar_sin_clasificar else auditoria.TICKET_RECLASIFICADO,
+        ahora=ahora,
+        usuario_id=usuario_id,
+        ticket_id=ticket_id,
+        valor_anterior=_describir_clasificacion(ticket.categoria, ticket.prioridad),
+        valor_nuevo=_describir_clasificacion(
+            cambios["categoria"], cambios.get("prioridad", ticket.prioridad)
+        ),
+    )
     conn.commit()
     return obtener_ticket(conn, ticket_id)
 
@@ -279,8 +314,14 @@ def actualizar_ticket(
     ticket_id: int,
     cambios: dict[str, object],
     clock: Clock = system_clock,
+    *,
+    usuario_id: int | None = None,
 ) -> TicketSalida:
-    """Aplica los `cambios` (ya validados) y devuelve el ticket actualizado."""
+    """Aplica los `cambios` (ya validados) y devuelve el ticket actualizado.
+
+    Cada campo que cambia de verdad (estado, prioridad, categoría, asignación) deja un registro
+    de auditoría a nombre de `usuario_id`.
+    """
     actual = conn.execute("SELECT * FROM tickets WHERE id = ?", (ticket_id,)).fetchone()
     if actual is None:
         raise TicketNoEncontradoError(ticket_id)
@@ -315,5 +356,27 @@ def actualizar_ticket(
 
     asignaciones = ", ".join(f"{columna} = ?" for columna in valores)
     conn.execute(f"UPDATE tickets SET {asignaciones} WHERE id = ?", [*valores.values(), ticket_id])
+    for campo, accion in ACCION_POR_CAMPO.items():
+        if campo not in cambios or cambios[campo] == actual[campo]:
+            continue
+        anterior, nuevo = actual[campo], cambios[campo]
+        if campo == "asignado_a":
+            anterior, nuevo = _email_de(conn, anterior), _email_de(conn, nuevo)
+        auditoria.registrar(
+            conn,
+            accion,
+            ahora=ahora,
+            usuario_id=usuario_id,
+            ticket_id=ticket_id,
+            valor_anterior=anterior,
+            valor_nuevo=nuevo,
+        )
     conn.commit()
     return obtener_ticket(conn, ticket_id)
+
+
+def _email_de(conn: sqlite3.Connection, usuario_id: int | None) -> str | None:
+    if usuario_id is None:
+        return None
+    fila = conn.execute("SELECT email FROM usuarios WHERE id = ?", (usuario_id,)).fetchone()
+    return fila["email"] if fila else str(usuario_id)

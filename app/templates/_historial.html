@@ -1,0 +1,20 @@
+<section id="historial" class="tarjeta" aria-label="Línea de tiempo"{% if oob %} hx-swap-oob="true"{% endif %}>
+  <h2>Línea de tiempo</h2>
+  {% if historial %}
+  <ol class="linea-tiempo">
+    {% for r in historial %}
+    <li>
+      <p class="evento-titulo">{{ etiquetas_accion.get(r.accion, r.accion) }}</p>
+      {% if r.valor_anterior is not none or r.valor_nuevo is not none %}
+      <p class="evento-cambio">
+        {% if r.accion != "ticket_creado" %}{{ valor_auditoria(r.accion, r.valor_anterior) }} &rarr; {% endif %}<strong>{{ valor_auditoria(r.accion, r.valor_nuevo) }}</strong>
+      </p>
+      {% endif %}
+      <p class="evento-meta tenue">{{ r.usuario_email or "Sistema" }} · {{ fecha(r.creado_en) }}</p>
+    </li>
+    {% endfor %}
+  </ol>
+  {% else %}
+  <p class="tenue">Sin actividad registrada.</p>
+  {% endif %}
+</section>

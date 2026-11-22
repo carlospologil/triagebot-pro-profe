@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block titulo %}Auditoría · TriageBot Pro{% endblock %}
+{% block cuerpo %}
+<header class="barra">
+  <span class="marca">TriageBot <span>Pro</span></span>
+  <form method="post" action="/logout" class="barra-usuario">
+    <a href="/bandeja">Bandeja</a>
+    <a href="/admin">Administración</a>
+    <span>{{ usuario.nombre }}</span>
+    <button type="submit" class="boton boton-secundario">Cerrar sesión</button>
+  </form>
+</header>
+<main class="contenido">
+  <p class="migas"><a href="/admin">&larr; Administración</a></p>
+  <h1>Auditoría</h1>
+  <form id="filtros" class="filtros" method="get" action="/admin/auditoria">
+    <div class="filtro">
+      <label for="usuario">Usuario</label>
+      <select id="usuario" name="usuario">
+        <option value="">Todos</option>
+        {% for u in usuarios %}
+        <option value="{{ u.id }}"{% if filtros.usuario == u.id|string %} selected{% endif %}>{{ u.nombre }} ({{ u.email }})</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="filtro">
+      <label for="accion">Acción</label>
+      <select id="accion" name="accion">
+        <option value="">Todas</option>
+        {% for clave, texto in acciones.items() %}
+        <option value="{{ clave }}"{% if filtros.accion == clave %} selected{% endif %}>{{ texto }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="filtro">
+      <label for="desde">Desde</label>
+      <input id="desde" name="desde" type="date" value="{{ filtros.desde }}">
+    </div>
+    <div class="filtro">
+      <label for="hasta">Hasta</label>
+      <input id="hasta" name="hasta" type="date" value="{{ filtros.hasta }}">
+    </div>
+    <button type="submit" class="boton">Filtrar</button>
+    <a href="/admin/auditoria" class="boton boton-secundario">Limpiar</a>
+  </form>
+  {% if error %}<p class="alerta alerta-error" role="alert">{{ error }}</p>{% endif %}
+  {% if pagina.items %}
+  <p class="resumen-tabla">{{ pagina.total }} registro{{ "s" if pagina.total != 1 }}</p>
+  <div class="tabla-envoltorio">
+    <table class="tabla-tickets">
+      <thead>
+        <tr>
+          <th>Fecha</th>
+          <th>Usuario</th>
+          <th>Acción</th>
+          <th>Ticket</th>
+          <th>Valor anterior</th>
+          <th>Valor nuevo</th>
+          <th>Detalle</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in pagina.items %}
+        <tr>
+          <td class="col-fecha">{{ fecha(r.creado_en) }}</td>
+          <td>{{ r.usuario_email or "—" }}</td>
+          <td>{{ acciones.get(r.accion, r.accion) }}</td>
+          <td>{% if r.ticket_id %}<a href="/tickets/{{ r.ticket_id }}">#{{ r.ticket_id }}</a>{% else %}—{% endif %}</td>
+          <td class="col-valor">{{ valor_auditoria(r.accion, r.valor_anterior) }}</td>
+          <td class="col-valor">{{ valor_auditoria(r.accion, r.valor_nuevo) }}</td>
+          <td class="col-valor tenue">{{ r.detalle or "" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if pagina.paginas > 1 %}
+  <nav class="paginacion" aria-label="Paginación">
+    {% if pagina.page > 1 %}<a class="boton boton-secundario" href="/admin/auditoria?{{ consulta }}page={{ pagina.page - 1 }}">&larr; Anterior</a>{% else %}<span class="boton boton-secundario boton-desactivado">&larr; Anterior</span>{% endif %}
+    <span>Página {{ pagina.page }} de {{ pagina.paginas }}</span>
+    {% if pagina.page < pagina.paginas %}<a class="boton boton-secundario" href="/admin/auditoria?{{ consulta }}page={{ pagina.page + 1 }}">Siguiente &rarr;</a>{% else %}<span class="boton boton-secundario boton-desactivado">Siguiente &rarr;</span>{% endif %}
+  </nav>
+  {% endif %}
+  {% elif not error %}
+  <p class="vacio">No hay registros de auditoría con estos filtros.</p>
+  {% endif %}
+</main>
+{% endblock %}

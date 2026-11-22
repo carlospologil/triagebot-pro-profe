@@ -117,6 +117,45 @@ MIGRATIONS: tuple[Migration, ...] = (
             "CHECK (corregido_por_persona IN (0, 1))",
         ),
     ),
+    Migration(
+        version=4,
+        name="auditoria_inmutable",
+        statements=(
+            "ALTER TABLE auditoria ADD COLUMN usuario_email TEXT",
+            "ALTER TABLE auditoria ADD COLUMN valor_anterior TEXT",
+            "ALTER TABLE auditoria ADD COLUMN valor_nuevo TEXT",
+            "CREATE INDEX idx_auditoria_accion ON auditoria(accion)",
+            # Solo se tolera el UPDATE que hacen las claves foráneas (ON DELETE SET NULL) al
+            # desaparecer el ticket o el usuario al que apunta el registro: el contenido no cambia.
+            """
+            CREATE TRIGGER auditoria_sin_update BEFORE UPDATE ON auditoria
+            WHEN NOT (
+                NEW.id IS OLD.id
+                AND NEW.accion IS OLD.accion
+                AND NEW.detalle IS OLD.detalle
+                AND NEW.creado_en IS OLD.creado_en
+                AND NEW.usuario_email IS OLD.usuario_email
+                AND NEW.valor_anterior IS OLD.valor_anterior
+                AND NEW.valor_nuevo IS OLD.valor_nuevo
+                AND (NEW.ticket_id IS OLD.ticket_id OR (
+                    NEW.ticket_id IS NULL
+                    AND NOT EXISTS (SELECT 1 FROM tickets WHERE id = OLD.ticket_id)))
+                AND (NEW.usuario_id IS OLD.usuario_id OR (
+                    NEW.usuario_id IS NULL
+                    AND NOT EXISTS (SELECT 1 FROM usuarios WHERE id = OLD.usuario_id)))
+            )
+            BEGIN
+                SELECT RAISE(ABORT, 'Los registros de auditoría no se pueden modificar');
+            END
+            """,
+            """
+            CREATE TRIGGER auditoria_sin_delete BEFORE DELETE ON auditoria
+            BEGIN
+                SELECT RAISE(ABORT, 'Los registros de auditoría no se pueden borrar');
+            END
+            """,
+        ),
+    ),
 )
 
 

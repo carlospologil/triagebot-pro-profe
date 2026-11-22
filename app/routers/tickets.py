@@ -1,7 +1,7 @@
 import sqlite3
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 
 from app.clock import Clock, get_clock
 from app.db import get_db
@@ -27,10 +27,13 @@ _NO_ENCONTRADO = {404: {"description": "El ticket no existe."}}
 
 
 @router.post("", response_model=TicketSalida, status_code=status.HTTP_201_CREATED)
-def crear(datos: TicketCrear, conn: Db, clock: RelojDep, llm: LlmDep):
+def crear(request: Request, datos: TicketCrear, conn: Db, clock: RelojDep, llm: LlmDep):
     """Crea un ticket en estado `nuevo` y lo clasifica con IA (si falla, queda `sin_clasificar`)."""
-    ticket = servicio.crear_ticket(conn, datos, clock)
-    return servicio.clasificar_ticket(conn, ticket.id, llm, clock, marcar_sin_clasificar=True)
+    autor = request.state.usuario.id
+    ticket = servicio.crear_ticket(conn, datos, clock, usuario_id=autor)
+    return servicio.clasificar_ticket(
+        conn, ticket.id, llm, clock, marcar_sin_clasificar=True, usuario_id=autor
+    )
 
 
 @router.post(
@@ -38,10 +41,12 @@ def crear(datos: TicketCrear, conn: Db, clock: RelojDep, llm: LlmDep):
     response_model=TicketSalida,
     responses={**_NO_ENCONTRADO, 502: {"description": "La IA no pudo clasificar el ticket."}},
 )
-def reclasificar(ticket_id: int, conn: Db, clock: RelojDep, llm: LlmDep):
+def reclasificar(request: Request, ticket_id: int, conn: Db, clock: RelojDep, llm: LlmDep):
     """Vuelve a clasificar el ticket con IA. Si la IA falla, el ticket no cambia."""
     try:
-        return servicio.clasificar_ticket(conn, ticket_id, llm, clock)
+        return servicio.clasificar_ticket(
+            conn, ticket_id, llm, clock, usuario_id=request.state.usuario.id
+        )
     except servicio.TicketNoEncontradoError:
         raise HTTPException(status_code=404, detail="Ticket no encontrado") from None
     except ClasificacionError:
@@ -87,13 +92,17 @@ def detalle(ticket_id: int, conn: Db):
     response_model=TicketSalida,
     responses={**_NO_ENCONTRADO, 409: {"description": "Transición de estado no permitida."}},
 )
-def actualizar(ticket_id: int, datos: TicketActualizar, conn: Db, clock: RelojDep):
+def actualizar(
+    request: Request, ticket_id: int, datos: TicketActualizar, conn: Db, clock: RelojDep
+):
     """Cambia estado, prioridad, categoría y/o asignación; solo se tocan los campos enviados."""
     cambios = datos.model_dump(exclude_unset=True)
     if not cambios:
         raise HTTPException(status_code=422, detail="Indica al menos un campo que modificar")
     try:
-        return servicio.actualizar_ticket(conn, ticket_id, cambios, clock)
+        return servicio.actualizar_ticket(
+            conn, ticket_id, cambios, clock, usuario_id=request.state.usuario.id
+        )
     except servicio.TicketNoEncontradoError:
         raise HTTPException(status_code=404, detail="Ticket no encontrado") from None
     except servicio.AsignadoInvalidoError as exc:

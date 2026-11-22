@@ -201,3 +201,33 @@ body {
 }
 .form-panel select:focus { outline: 2px solid var(--color-primario); outline-offset: 1px; }
 .form-panel .boton { margin-top: 0.4rem; }
+
+.columna-principal { display: flex; flex-direction: column; gap: 1.25rem; min-width: 0; }
+.linea-tiempo { list-style: none; margin: 0; padding: 0 0 0 1rem; border-left: 2px solid var(--color-borde); }
+.linea-tiempo li { position: relative; padding: 0 0 1rem 0.75rem; }
+.linea-tiempo li:last-child { padding-bottom: 0; }
+.linea-tiempo li::before {
+  content: "";
+  position: absolute;
+  left: -1.4rem;
+  top: 0.35rem;
+  width: 0.65rem;
+  height: 0.65rem;
+  border-radius: 50%;
+  background: var(--color-primario);
+}
+.linea-tiempo p { margin: 0; }
+.evento-titulo { font-weight: 600; }
+.evento-cambio { overflow-wrap: anywhere; }
+.evento-meta { font-size: 0.8rem; }
+
+.filtro input[type="date"], .filtro input[type="text"] {
+  padding: 0.5rem 0.65rem;
+  border: 1px solid var(--color-borde);
+  border-radius: 8px;
+  font: inherit;
+  background: #fff;
+}
+a.boton { display: inline-block; text-decoration: none; }
+.col-fecha { white-space: nowrap; color: var(--color-suave); }
+.col-valor { overflow-wrap: anywhere; min-width: 8rem; }
